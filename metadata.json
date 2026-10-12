@@ -1,0 +1,10 @@
+{
+  "name": "Tara AI - JARVIS Voice Assistant",
+  "description": "JARVIS-style futuristic mobile AI voice assistant featuring Tara (female Hindi/Hinglish voice), real-time audio-to-audio interaction, holographic HUD visualizer, and high-knowledge assistance.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
