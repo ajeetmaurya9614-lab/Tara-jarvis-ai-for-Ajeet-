@@ -187,6 +187,19 @@ export const TranscriptDrawer: React.FC<TranscriptDrawerProps> = ({
                     {msg.text}
                   </p>
 
+                  {msg.screenshotBase64 && (
+                    <div className="mt-2 relative rounded-lg overflow-hidden border border-cyan-500/40 max-h-48 bg-black/40">
+                      <img
+                        src={`data:image/jpeg;base64,${msg.screenshotBase64}`}
+                        alt="स्क्रीन कैप्चर (Live Display)"
+                        className="w-full h-auto object-cover max-h-48"
+                      />
+                      <div className="absolute bottom-1 right-1 px-2 py-0.5 rounded bg-black/80 text-[9px] text-cyan-300 font-mono flex items-center gap-1 border border-cyan-500/30">
+                        <span>🖼️ स्क्रीन कैप्चर (Live Screen Context)</span>
+                      </div>
+                    </div>
+                  )}
+
                   {msg.action && (
                     <div className="mt-2 pt-2 border-t border-cyan-500/20 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 text-[11px] text-teal-300 font-mono">

@@ -12,7 +12,8 @@ export type DeviceActionType =
   | 'open_spotify'
   | 'open_calculator'
   | 'search_web'
-  | 'vibrate';
+  | 'vibrate'
+  | 'analyze_screen';
 
 export interface DeviceAction {
   type: DeviceActionType;
@@ -32,6 +33,7 @@ export interface ChatMessage {
   audioBase64?: string;
   mimeType?: string;
   action?: DeviceAction;
+  screenshotBase64?: string;
 }
 
 export interface VoiceSettings {
@@ -42,7 +44,8 @@ export interface VoiceSettings {
   sfxEnabled: boolean;
   autoListen: boolean; // Continuous conversation loop
   alwaysOnMic: boolean; // Don't stop listening between phrases
-  silenceThreshold: number; // Milliseconds of silence before auto-submission (e.g. 2000ms)
+  strictWakeWord: boolean; // Only wake on "हे तारा" / "Hey Tara"
+  silenceThreshold: number; // Milliseconds of silence before auto-submission (e.g. 750ms)
   fastResponse: boolean; // Low-latency fast response pipeline
   languageMode: 'hi-IN' | 'en-IN' | 'auto';
 }

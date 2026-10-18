@@ -11,6 +11,7 @@ import {
   Video,
   Flashlight,
   Camera,
+  Monitor,
 } from 'lucide-react';
 
 interface QuickPromptsProps {
@@ -20,45 +21,51 @@ interface QuickPromptsProps {
 
 const PROMPTS = [
   {
+    icon: Monitor,
+    label: 'स्क्रीन देखो (Multimodal)',
+    text: 'हे तारा, स्क्रीन देखो',
+    color: 'border-cyan-400 text-cyan-200 bg-cyan-950/40 shadow-[0_0_10px_rgba(6,182,212,0.3)]',
+  },
+  {
     icon: Sparkles,
     label: 'तारा का परिचय',
-    text: 'नमस्ते तारा! अपना परिचय दीजिए और बताइए कि आप क्या-क्या कर सकती हैं?',
+    text: 'हे तारा! अपना परिचय दीजिए और बताइए कि आप क्या-क्या कर सकती हैं?',
     color: 'border-cyan-500/40 text-cyan-200 bg-cyan-950/30',
   },
   {
     icon: MessageCircle,
     label: 'व्हाट्सएप खोलो',
-    text: 'तारा, व्हाट्सएप खोलो।',
+    text: 'हे तारा, व्हाट्सएप खोलो।',
     color: 'border-emerald-500/40 text-emerald-200 bg-emerald-950/30',
   },
   {
     icon: Video,
     label: 'यूट्यूब पर गाने चलाओ',
-    text: 'तारा, यूट्यूब पर नए गाने चलाओ।',
+    text: 'हे तारा, यूट्यूब पर नए गाने चलाओ।',
     color: 'border-red-500/40 text-red-200 bg-red-950/30',
   },
   {
     icon: Flashlight,
     label: 'टॉर्च जलाओ',
-    text: 'तारा, टॉर्च चालू करो।',
+    text: 'हे तारा, टॉर्च चालू करो।',
     color: 'border-amber-500/40 text-amber-200 bg-amber-950/30',
   },
   {
     icon: Camera,
     label: 'कैमरा खोलो',
-    text: 'तारा, कैमरा खोलो।',
+    text: 'हे तारा, कैमरा खोलो।',
     color: 'border-cyan-500/40 text-cyan-200 bg-cyan-950/30',
   },
   {
     icon: Atom,
     label: 'ब्लैक होल और ब्रह्मांड',
-    text: 'तारा, ब्लैक होल कैसे बनता है और इसके अंदर क्या होता है? सरल हिन्दी में समझाइए।',
+    text: 'हे तारा, ब्लैक होल कैसे बनता है और इसके अंदर क्या होता है? सरल हिन्दी में समझाइए।',
     color: 'border-blue-500/40 text-blue-200 bg-blue-950/30',
   },
   {
     icon: Compass,
     label: 'ISRO और गगनयान',
-    text: 'तारा, भारत के आगामी अंतरिक्ष मिशन जैसे गगनयान और चंद्रयान के बारे में बताइए।',
+    text: 'हे तारा, भारत के आगामी अंतरिक्ष मिशन जैसे गगनयान और चंद्रयान के बारे में बताइए।',
     color: 'border-indigo-500/40 text-indigo-200 bg-indigo-950/30',
   },
   {

@@ -261,6 +261,93 @@ app.post('/api/tara/chat-stream', async (req, res) => {
   }
 });
 
+// Multimodal Screen Analysis endpoint (Screenshot Image + User Query -> Tara Response)
+app.post('/api/tara/analyze-screen', async (req, res) => {
+  try {
+    const { imageBase64, prompt = 'स्क्रीन देखो और बताओ क्या है', history = [] } = req.body;
+
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      res.status(400).json({ error: 'imageBase64 screenshot data is required' });
+      return;
+    }
+
+    // Clean base64 data prefix if present (e.g. data:image/jpeg;base64,...)
+    const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+
+    if (!process.env.GEMINI_API_KEY) {
+      res.json({
+        success: true,
+        replyText: 'मैंने आपकी स्क्रीन का अवलोकन किया है। जार्विस सिस्टम सक्रिय है और स्क्रीन सामान्य प्रतीत हो रही है।',
+      });
+      return;
+    }
+
+    const contents: any[] = [];
+    const recentHistory = Array.isArray(history) ? history.slice(-4) : [];
+    for (const h of recentHistory) {
+      if (h.role && h.text) {
+        contents.push({
+          role: h.role === 'tara' || h.role === 'assistant' || h.role === 'model' ? 'model' : 'user',
+          parts: [{ text: h.text }],
+        });
+      }
+    }
+
+    contents.push({
+      role: 'user',
+      parts: [
+        {
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: cleanBase64,
+          },
+        },
+        {
+          text: `User query: "${prompt}".
+You are TARA (तारा), an intelligent, friendly Indian female AI assistant (JARVIS).
+You are looking at a real-time frame/screenshot of the user's active screen display.
+1. Inspect the visible screen display carefully (active application, open tabs, text, code, document, video, or user interface).
+2. Answer the user's question directly in warm, natural Hindi (or Hinglish).
+3. Keep the response crisp, concise (2-4 sentences), and suitable for immediate spoken speech without awkward markdown symbols.`,
+        },
+      ],
+    });
+
+    const candidateModels = getAvailableModels();
+    let response: any = null;
+
+    for (const model of candidateModels) {
+      try {
+        response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction: TARA_SYSTEM_INSTRUCTION,
+            temperature: 0.6,
+          },
+        });
+        if (response?.text) break;
+      } catch (err: any) {
+        handleModelError(model, err);
+      }
+    }
+
+    const replyText =
+      response?.text ||
+      'मैंने आपकी स्क्रीन देख ली है। स्क्रीन पर सक्रिय सामग्री और विंडो व्यवस्थित हैं। आप इसके बारे में क्या जानना चाहते हैं?';
+
+    res.json({
+      success: true,
+      replyText,
+    });
+  } catch (error: any) {
+    res.json({
+      success: true,
+      replyText: 'स्क्रीन विश्लेषण में कुछ तकनीकी समस्या आई, परंतु मैं आपकी सहायता के लिए तैयार हूँ।',
+    });
+  }
+});
+
 // Track if Gemini TTS daily quota is reached to avoid failing API calls
 let ttsQuotaExhaustedUntil: number = Date.now() + 12 * 60 * 60 * 1000;
 

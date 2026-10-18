@@ -210,6 +210,24 @@ export const SystemToolsModal: React.FC<SystemToolsModalProps> = ({
 
               {/* Toggles */}
               <div className="space-y-2">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 cursor-pointer hover:bg-cyan-950/40">
+                  <div>
+                    <div className="text-cyan-200 font-medium flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+                      <span>Strict Wake Word: "हे तारा" (Hey Tara)</span>
+                    </div>
+                    <div className="text-[10px] text-cyan-400/80">
+                      असिस्टेंट केवल "हे तारा" या "Hey Tara" बोलने पर ही सक्रिय होगा। अन्य बातों पर ट्रिगर नहीं होगा।
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={voiceSettings.strictWakeWord ?? true}
+                    onChange={(e) => onUpdateSettings({ strictWakeWord: e.target.checked })}
+                    className="w-4 h-4 accent-cyan-400 rounded cursor-pointer"
+                  />
+                </label>
+
                 <label className="flex items-center justify-between p-2.5 rounded-xl border border-cyan-500/20 bg-slate-950/30 cursor-pointer hover:bg-slate-950/50">
                   <div>
                     <div className="text-cyan-200 font-medium flex items-center gap-1.5">
@@ -217,7 +235,7 @@ export const SystemToolsModal: React.FC<SystemToolsModalProps> = ({
                       <span>Always-On Continuous Mic (लगातार सुनना)</span>
                     </div>
                     <div className="text-[10px] text-cyan-500/70">
-                      माइक्रोफोन बीच में नहीं कटेगा और लगातार आपकी बात सुनता रहेगा
+                      माइक्रोफोन बैकग्राउंड में चालू रहेगा और "हे तारा" बोलने पर तुरंत उत्तर देगा
                     </div>
                   </div>
                   <input

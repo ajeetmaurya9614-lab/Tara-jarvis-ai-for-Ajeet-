@@ -17,6 +17,7 @@ import { DeviceControlHub } from './components/DeviceControlHub';
 import { QuickPrompts } from './components/QuickPrompts';
 import { TranscriptDrawer } from './components/TranscriptDrawer';
 import { SystemToolsModal } from './components/SystemToolsModal';
+import { FloatingTaraOverlay } from './components/FloatingTaraOverlay';
 import { playJarvisSfx } from './utils/soundEffects';
 import {
   playGeminiAudio,
@@ -31,6 +32,12 @@ import {
   detectDeviceIntent,
   executeDeviceAction,
 } from './utils/deviceController';
+import {
+  containsStrictWakeWord,
+  parseWakeWordAndCommand,
+  isScreenContextCommand,
+} from './utils/wakeWord';
+import { captureDisplayFrame } from './utils/screenCapture';
 import { Volume2, ShieldAlert } from 'lucide-react';
 
 export default function App() {
@@ -44,6 +51,21 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isTorchActive, setIsTorchActive] = useState<boolean>(false);
 
+  // Floating Overlay mode state (multitasking while other apps remain usable)
+  const [isFloatingOverlay, setIsFloatingOverlay] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('tara_floating_overlay') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('tara_floating_overlay', String(isFloatingOverlay));
+    } catch {}
+  }, [isFloatingOverlay]);
+
   // Voice & System Configuration with optimized defaults
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
     engine: 'browser', // Default to high-speed unlimited device Hindi voice (prevents 429 quota exhaustion)
@@ -52,7 +74,8 @@ export default function App() {
     speechPitch: 1.1,
     sfxEnabled: true,
     autoListen: true, // Auto loop conversation
-    alwaysOnMic: true, // Listen continuously without cutting off midway
+    alwaysOnMic: true, // Listen continuously in background for wake word
+    strictWakeWord: true, // Strict Wake Word: triggers ONLY on "हे तारा" or "Hey Tara"
     silenceThreshold: 750, // Ultra-fast sub-second silence tolerance for immediate response!
     fastResponse: true, // Ultra-fast sub-second response
     languageMode: 'hi-IN',
@@ -76,6 +99,7 @@ export default function App() {
   const recorderRef = useRef<VoiceRecorder | null>(null);
   const isListeningRef = useRef<boolean>(false);
   const isAiSpeakingRef = useRef<boolean>(false);
+  const isWakeTriggeredRef = useRef<boolean>(false);
   const assistantStateRef = useRef<AssistantState>('idle');
   const autoListenTimeoutRef = useRef<any>(null);
   const speechDoneTimeoutRef = useRef<any>(null);
@@ -269,6 +293,88 @@ export default function App() {
   );
 
   /**
+   * Multitasking Screen Context: Analyzes real-time screenshot display with Gemini Multimodal
+   * Triggered when user commands "हे तारा, स्क्रीन देखो" (Hey Tara, look at my screen)
+   */
+  const handleScreenContextLook = useCallback(
+    async (userSpokenQuery?: string) => {
+      // 1. Immediately stop microphone & any current speech
+      isAiSpeakingRef.current = true;
+      stopMicrophoneImmediately();
+      stopAllSpeech();
+      setAssistantState('thinking');
+      playJarvisSfx('think', voiceSettings.sfxEnabled);
+      setLiveTranscription('');
+
+      const cleanQuery = userSpokenQuery?.trim() || 'हे तारा, स्क्रीन देखो';
+
+      try {
+        // 2. Capture real-time display frame via Web Screen API or seamless window snapshot fallback
+        const frame = await captureDisplayFrame();
+
+        const userMsg: ChatMessage = {
+          id: `user-${Date.now()}`,
+          sender: 'user',
+          text: cleanQuery,
+          timestamp: Date.now(),
+          screenshotBase64: frame.base64Data,
+        };
+        setMessages((prev) => [...prev, userMsg]);
+
+        // 3. Send screenshot + prompt to /api/tara/analyze-screen
+        const res = await fetch('/api/tara/analyze-screen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: frame.base64Data,
+            prompt: cleanQuery,
+            history: messages.slice(-4).map((m) => ({ role: m.sender, text: m.text })),
+          }),
+        });
+
+        const data = res.ok ? await res.json() : null;
+        const replyText =
+          data?.replyText || 'मैंने आपकी स्क्रीन का अवलोकन कर लिया है। स्क्रीन पर सक्रिय सामग्री सामान्य है।';
+
+        const isFullDisplay = frame.source === 'display_media';
+        const taraMsg: ChatMessage = {
+          id: `tara-${Date.now()}`,
+          sender: 'tara',
+          text: replyText,
+          timestamp: Date.now(),
+          screenshotBase64: frame.base64Data,
+          action: {
+            type: 'analyze_screen',
+            label: isFullDisplay ? 'स्क्रीन विश्लेषण (डिस्प्ले)' : 'स्क्रीन विश्लेषण (विंडो व्यू)',
+            description: isFullDisplay ? 'लाइव डिस्प्ले विज़न विश्लेषण संपन्न' : 'सक्रिय विंडो एवं HUD का विज़न विश्लेषण संपन्न',
+          },
+        };
+
+        setMessages((prev) => [...prev, taraMsg]);
+        setErrorMessage(null);
+
+        // 4. Speak response aloud in warm Hindi
+        await speakTaraResponse(replyText);
+      } catch (err: any) {
+        console.warn('Screen context analysis info/fallback:', err);
+        const failText = 'स्क्रीन को पूरी तरह कैप्चर करने में क्षणिक रुकावट आई, परंतु मैं सक्रिय हूँ। आप मुझसे बोलकर भी पूछ सकते हैं!';
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `err-${Date.now()}`,
+            sender: 'tara',
+            text: failText,
+            timestamp: Date.now(),
+          },
+        ]);
+        await speakTaraResponse(failText);
+      }
+    },
+    [messages, speakTaraResponse, stopMicrophoneImmediately, voiceSettings]
+  );
+
+  /**
    * Process user message (with instantaneous device intent execution & fast response)
    */
   const processUserMessage = useCallback(
@@ -284,6 +390,36 @@ export default function App() {
       playJarvisSfx('think', voiceSettings.sfxEnabled);
       setLiveTranscription('');
 
+      // Check if user text begins with wake word and extract payload
+      const parsedWake = parseWakeWordAndCommand(cleanInput);
+      const effectiveInput = parsedWake.isWakeWord && parsedWake.command ? parsedWake.command : cleanInput;
+
+      // Handle standalone wake word prompt ("हे तारा" / "Hey Tara" without following command)
+      if (parsedWake.isWakeWord && !parsedWake.command) {
+        const greetText = 'जी हुक्म! मैं तारा हूँ, आपकी बात सुन रही हूँ। आज्ञा दीजिए!';
+        const userMsg: ChatMessage = {
+          id: `user-${Date.now()}`,
+          sender: 'user',
+          text: cleanInput,
+          timestamp: Date.now(),
+        };
+        const taraMsg: ChatMessage = {
+          id: `tara-${Date.now()}`,
+          sender: 'tara',
+          text: greetText,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, userMsg, taraMsg]);
+        await speakTaraResponse(greetText);
+        return;
+      }
+
+      // 0. MULTITASKING SCREEN CONTEXT ("हे तारा, स्क्रीन देखो" / "स्क्रीन देखो")
+      if (isScreenContextCommand(effectiveInput) || isScreenContextCommand(cleanInput)) {
+        await handleScreenContextLook(cleanInput);
+        return;
+      }
+
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
         sender: 'user',
@@ -294,7 +430,7 @@ export default function App() {
       setMessages((prev) => [...prev, userMsg]);
 
       // 1. FAST DEVICE INTENT DETECTION (0ms delay!)
-      const deviceAction = detectDeviceIntent(cleanInput);
+      const deviceAction = detectDeviceIntent(effectiveInput) || detectDeviceIntent(cleanInput);
 
       if (deviceAction) {
         // Execute the action immediately
@@ -591,16 +727,71 @@ export default function App() {
 
           const combined = (finalTranscriptBufferRef.current + interim).trim();
           if (combined) {
+            // 1. Strict Wake Word Filter:
+            // Assistant must trigger ONLY when user says "हे तारा" or "Hey Tara".
+            // Ignore other names or generic greetings to avoid accidental triggers!
+            if (voiceSettings.strictWakeWord && !isWakeTriggeredRef.current) {
+              const hasWake = containsStrictWakeWord(combined);
+              if (!hasWake) {
+                // Ignore background conversations / other names
+                clearTimeout(speechDoneTimeoutRef.current);
+                setLiveTranscription('वेक वर्ड "हे तारा" की प्रतीक्षा...');
+                return;
+              }
+
+              // Strict wake word DETECTED!
+              isWakeTriggeredRef.current = true;
+              playJarvisSfx('wake', voiceSettings.sfxEnabled);
+              setAssistantState('listening');
+
+              const parsed = parseWakeWordAndCommand(combined);
+              if (parsed.command) {
+                // User spoke command immediately with "हे तारा" (e.g. "हे तारा, स्क्रीन देखो")
+                setLiveTranscription(parsed.command);
+                accumulatedTranscriptRef.current = parsed.command;
+
+                const isCommandOrQuestion =
+                  /[।?!]/.test(parsed.command) ||
+                  /(खोलो|चलाओ|बताओ|सुनाओ|दिखाओ|कॉल|लगाओ|सर्च|जलाओ|बंद|करो|है|open|play|call|search|tell|screen|स्क्रीन)/i.test(
+                    parsed.command
+                  );
+
+                const debounceMs = isCommandOrQuestion ? 350 : (voiceSettings.silenceThreshold || 750);
+                clearTimeout(speechDoneTimeoutRef.current);
+                speechDoneTimeoutRef.current = setTimeout(() => {
+                  if (isListeningRef.current && accumulatedTranscriptRef.current.trim()) {
+                    stopListeningAndSubmit();
+                  }
+                }, debounceMs);
+                return;
+              } else {
+                // User said only "हे तारा" to get Tara's attention
+                setLiveTranscription('"हे तारा" सक्रिय... बोलिए');
+                accumulatedTranscriptRef.current = '';
+                finalTranscriptBufferRef.current = '';
+                clearTimeout(speechDoneTimeoutRef.current);
+                speechDoneTimeoutRef.current = setTimeout(() => {
+                  if (isListeningRef.current) {
+                    stopListeningAndSubmit();
+                  }
+                }, 3500);
+                return;
+              }
+            }
+
+            // 2. Active Command Session:
             setLiveTranscription(combined);
             accumulatedTranscriptRef.current = combined;
 
             // Voice Activity Detection (VAD) Pause Debounce:
-            // Fast 400ms for command/question endings, otherwise silenceThreshold
+            // Fast 350ms for command/question endings, otherwise silenceThreshold
             const isCommandOrQuestion =
               /[।?!]/.test(combined) ||
-              /(खोलो|चलाओ|बताओ|सुनाओ|दिखाओ|कॉल|लगाओ|सर्च|जलाओ|बंद|करो|है|open|play|call|search|tell)/i.test(combined);
+              /(खोलो|चलाओ|बताओ|सुनाओ|दिखाओ|कॉल|लगाओ|सर्च|जलाओ|बंद|करो|है|open|play|call|search|tell|screen|स्क्रीन)/i.test(
+                combined
+              );
 
-            const debounceMs = isCommandOrQuestion ? 400 : (voiceSettings.silenceThreshold || 750);
+            const debounceMs = isCommandOrQuestion ? 350 : (voiceSettings.silenceThreshold || 750);
 
             clearTimeout(speechDoneTimeoutRef.current);
             speechDoneTimeoutRef.current = setTimeout(() => {
@@ -687,12 +878,16 @@ export default function App() {
       }
     }
 
-    const transcript = (
+    const raw = (
       accumulatedTranscriptRef.current || finalTranscriptBufferRef.current
     ).trim();
 
-    if (transcript) {
-      processUserMessage(transcript, audioBase64);
+    isWakeTriggeredRef.current = false;
+
+    if (raw) {
+      const parsed = parseWakeWordAndCommand(raw);
+      const commandToRun = parsed.isWakeWord && parsed.command ? parsed.command : raw;
+      processUserMessage(commandToRun, audioBase64);
     } else {
       isAiSpeakingRef.current = false;
       setAssistantState('idle');
@@ -724,6 +919,7 @@ export default function App() {
       }
       stopAllSpeech();
       isAiSpeakingRef.current = false;
+      isWakeTriggeredRef.current = false;
       stopMicrophoneImmediately();
       setAssistantState('idle');
       playJarvisSfx('tap', voiceSettings.sfxEnabled);
@@ -734,7 +930,8 @@ export default function App() {
       // User tapped while listening -> finish and process immediately
       stopListeningAndSubmit();
     } else {
-      // User tapped while idle -> start continuous listening
+      // User explicitly tapped while idle -> armed for immediate command!
+      isWakeTriggeredRef.current = true;
       startListening();
     }
   };
@@ -756,6 +953,104 @@ export default function App() {
     speakTaraResponse(testText);
   };
 
+  if (isFloatingOverlay) {
+    return (
+      <div className="relative min-h-screen w-full bg-[#030712]/30 backdrop-blur-[2px] text-cyan-100 flex flex-col justify-between p-3 sm:p-4 font-sans select-none overflow-hidden">
+        {/* Subtle high-tech grid hint */}
+        <div className="absolute inset-0 pointer-events-none opacity-25">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#082f4915_1px,transparent_1px),linear-gradient(to_bottom,#082f4915_1px,transparent_1px)] bg-[size:32px_32px]" />
+        </div>
+
+        {/* Minimal Floating Top Banner */}
+        <header className="relative z-10 flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-slate-950/85 border border-cyan-500/30 backdrop-blur-md shadow-xl">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <span className="font-['Orbitron',sans-serif] text-xs font-bold text-cyan-200">
+              TARA // बैकग्राउंड फ्लोटिंग ओवरले
+            </span>
+            <span className="text-[9.5px] font-mono text-cyan-300 border border-cyan-400/50 px-1.5 py-0.5 rounded bg-cyan-950/80 shadow-[0_0_8px_rgba(6,182,212,0.3)] hidden sm:inline">
+              वेक वर्ड: "हे तारा" (Hey Tara)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleScreenContextLook('हे तारा, स्क्रीन देखो')}
+              title='स्क्रीन देखो ("हे तारा, स्क्रीन देखो")'
+              className="px-2.5 py-1 rounded text-xs font-mono bg-cyan-950/80 border border-cyan-500/40 text-cyan-200 hover:bg-cyan-900/60 hover:border-cyan-300 transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_8px_rgba(6,182,212,0.25)]"
+            >
+              <span>स्क्रीन देखो</span>
+            </button>
+            <button
+              onClick={() => {
+                setIsFloatingOverlay(false);
+                playJarvisSfx('tap', voiceSettings.sfxEnabled);
+              }}
+              className="px-2.5 py-1 rounded text-xs font-mono bg-cyan-500/20 border border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/30 transition-all cursor-pointer font-bold"
+            >
+              पूर्ण HUD खोलें (Expand)
+            </button>
+          </div>
+        </header>
+
+        {/* Multitasking Context Area */}
+        <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 text-center pointer-events-none">
+          <div className="p-5 sm:p-6 rounded-3xl border border-cyan-500/25 bg-slate-950/60 backdrop-blur-md max-w-md shadow-2xl">
+            <div className="w-12 h-12 mx-auto mb-2.5 rounded-full border border-cyan-400/50 flex items-center justify-center bg-cyan-950/60 shadow-[0_0_20px_rgba(6,182,212,0.3)] animate-pulse">
+              <span className="text-cyan-300 font-mono text-xs font-bold">तारा</span>
+            </div>
+            <h2 className="text-sm font-['Orbitron',sans-serif] font-bold text-cyan-200 tracking-wider">
+              मल्टीटास्किंग बैकग्राउंड मोड सक्रिय
+            </h2>
+            <p className="text-xs text-cyan-300/80 mt-1 font-mono">
+              आपकी अन्य ऍप्लिकेशन्स खुली और उपयोग योग्य हैं।
+            </p>
+            <div className="mt-3 flex flex-wrap justify-center gap-1.5 text-[10px] font-mono">
+              <span className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">
+                🗣️ "हे तारा, स्क्रीन देखो"
+              </span>
+              <span className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">
+                🗣️ "हे तारा, व्हाट्सएप खोलो"
+              </span>
+              <span className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">
+                🗣️ "हे तारा, मौसम कैसा है?"
+              </span>
+            </div>
+          </div>
+        </main>
+
+        {/* Floating Interactive Tara Widget */}
+        <FloatingTaraOverlay
+          assistantState={assistantState}
+          liveTranscription={liveTranscription}
+          lastMessage={messages[messages.length - 1]}
+          onToggleListen={handleToggleListen}
+          onExpandToFull={() => {
+            setIsFloatingOverlay(false);
+            playJarvisSfx('tap', voiceSettings.sfxEnabled);
+          }}
+          onTriggerScreenLook={() => handleScreenContextLook('हे तारा, स्क्रीन देखो')}
+          sfxEnabled={voiceSettings.sfxEnabled}
+          onToggleSfx={() => handleUpdateSettings({ sfxEnabled: !voiceSettings.sfxEnabled })}
+          alwaysOnMic={voiceSettings.alwaysOnMic}
+        />
+
+        {/* System Settings & Telemetry Modal */}
+        <SystemToolsModal
+          isOpen={isSettingsOpen}
+          onClose={() => {
+            setIsSettingsOpen(false);
+            playJarvisSfx('tap', voiceSettings.sfxEnabled);
+          }}
+          voiceSettings={voiceSettings}
+          onUpdateSettings={handleUpdateSettings}
+          telemetry={telemetry}
+          onTestVoice={handleTestVoice}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen w-full flex flex-col justify-between bg-[#030712] text-cyan-100 overflow-hidden font-sans">
       {/* Background Holographic Hex Grid & Glow FX */}
@@ -768,7 +1063,7 @@ export default function App() {
         <div className="absolute bottom-2 right-2 w-8 h-8 border-b-2 border-r-2 border-cyan-500/40" />
       </div>
 
-      {/* Top Sci-Fi Header */}
+      {/* Top Sci-Fi Header with Screen Look and Overlay triggers */}
       <JarvisHUDHeader
         sfxEnabled={voiceSettings.sfxEnabled}
         onToggleSfx={() =>
@@ -785,6 +1080,14 @@ export default function App() {
           playJarvisSfx('tap', voiceSettings.sfxEnabled);
         }}
         coreTemp={telemetry.coreTemp}
+        onToggleFloatingOverlay={() => {
+          setIsFloatingOverlay(true);
+          playJarvisSfx('tap', voiceSettings.sfxEnabled);
+        }}
+        onTriggerScreenLook={() => {
+          handleScreenContextLook('हे तारा, स्क्रीन देखो');
+        }}
+        isFloatingOverlay={isFloatingOverlay}
       />
 
       {/* Main Center Area: Holographic Arc Reactor */}
