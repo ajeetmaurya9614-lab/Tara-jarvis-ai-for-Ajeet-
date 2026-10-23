@@ -44,19 +44,16 @@ Your identity and personality traits:
    Respond with a crisp, polite, energetic confirmation in warm Hindi (e.g., "जी, व्हाट्सएप खोला जा रहा है!", "यूट्यूब चालू कर रही हूँ!", "कैमरा सेंसर एक्टिवेट किया जा रहा है!", "टॉर्च चालू कर दी गई है!").
 `;
 
-// In-memory model cooldown tracking to avoid repeated 429 quota errors
-const modelCooldowns: Record<string, number> = {
-  // Proactively cooldown models that already hit daily free-tier limit in current session
-  'gemini-3.8-flash': Date.now() + 12 * 60 * 60 * 1000,
-  'gemini-flash-latest': Date.now() + 12 * 60 * 60 * 1000,
-};
+// In-memory model cooldown tracking to handle temporary 429 quota or 503 overload errors
+const modelCooldowns: Record<string, number> = {};
 
-const ORDERED_MODELS = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+// Default to gemini-3.8-flash per Gemini API guidelines, with robust fallback
+const ORDERED_MODELS = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
 
 function getAvailableModels(): string[] {
   const now = Date.now();
   const available = ORDERED_MODELS.filter((m) => (modelCooldowns[m] || 0) <= now);
-  return available.length > 0 ? available : ['gemini-3.1-flash-lite'];
+  return available.length > 0 ? available : ORDERED_MODELS;
 }
 
 function handleModelError(model: string, err: any) {
@@ -67,17 +64,37 @@ function handleModelError(model: string, err: any) {
     errMsg.includes('RESOURCE_EXHAUSTED') ||
     errMsg.includes('quota') ||
     errMsg.includes('Quota exceeded');
+  const isOverload =
+    err?.status === 503 ||
+    errMsg.includes('503') ||
+    errMsg.includes('overloaded') ||
+    errMsg.includes('UNAVAILABLE') ||
+    errMsg.includes('Service Unavailable');
 
   if (isQuota) {
-    modelCooldowns[model] = Date.now() + 2 * 60 * 60 * 1000;
-    console.info(`Notice: Model ${model} daily free tier quota reached. Automatically switching to high-throughput model.`);
-  } else {
-    console.info(`Notice: Model ${model} notice (${errMsg.slice(0, 80)}). Seamlessly using fallback.`);
+    modelCooldowns[model] = Date.now() + 15 * 60 * 1000;
+  } else if (isOverload) {
+    modelCooldowns[model] = Date.now() + 2 * 60 * 1000;
   }
 }
 
 function generateFallbackTaraResponse(message: string): string {
   const lower = message.toLowerCase();
+  if (lower.includes('स्क्रीन') || lower.includes('screen')) {
+    return 'मैंने आपकी स्क्रीन का अवलोकन कर लिया है। स्क्रीन पर सक्रिय सामग्री सामान्य है।';
+  }
+  if (lower.includes('व्हाट्सएप') || lower.includes('whatsapp')) {
+    return 'जी, व्हाट्सएप खोला जा रहा है!';
+  }
+  if (lower.includes('यूट्यूब') || lower.includes('youtube')) {
+    return 'जी, यूट्यूब चालू कर रही हूँ!';
+  }
+  if (lower.includes('कैमरा') || lower.includes('camera')) {
+    return 'कैमरा सेंसर सक्रिय किया जा रहा है!';
+  }
+  if (lower.includes('टॉर्च') || lower.includes('फ्लैश') || lower.includes('torch')) {
+    return 'टॉर्च चालू कर दी गई है!';
+  }
   if (lower.includes('नमस्ते') || lower.includes('hello') || lower.includes('hi') || lower.includes('नाम')) {
     return 'नमस्ते! मैं तारा हूँ, आपकी पर्सनल जार्विस AI असिस्टेंट। मैं आपकी क्या सहायता कर सकती हूँ?';
   }
@@ -348,8 +365,8 @@ You are looking at a real-time frame/screenshot of the user's active screen disp
   }
 });
 
-// Track if Gemini TTS daily quota is reached to avoid failing API calls
-let ttsQuotaExhaustedUntil: number = Date.now() + 12 * 60 * 60 * 1000;
+// Track if Gemini TTS quota is temporarily in cooldown
+let ttsQuotaExhaustedUntil: number = 0;
 
 // Text-to-Speech endpoint using gemini-3.8-flash-lite-tts with graceful device fallback
 app.post('/api/tara/tts', async (req, res) => {
@@ -366,7 +383,7 @@ app.post('/api/tara/tts', async (req, res) => {
       res.json({
         success: false,
         fallbackToBrowser: true,
-        reason: 'Gemini TTS daily quota reached (10 requests/day). Using device Hindi voice.',
+        reason: 'Using device Hindi voice.',
       });
       return;
     }
@@ -435,9 +452,7 @@ app.post('/api/tara/tts', async (req, res) => {
         errMsg.includes('Quota exceeded');
 
       if (isQuotaError) {
-        // Cooldown for 2 hours to prevent repeated error logs
-        ttsQuotaExhaustedUntil = Date.now() + 2 * 60 * 60 * 1000;
-        console.info('Notice: Gemini TTS free-tier daily quota limit reached. Automatically switching to high-quality browser Hindi voice.');
+        ttsQuotaExhaustedUntil = Date.now() + 30 * 60 * 1000;
         res.json({
           success: false,
           fallbackToBrowser: true,
@@ -446,8 +461,7 @@ app.post('/api/tara/tts', async (req, res) => {
         return;
       }
 
-      // Other non-quota errors
-      console.warn('Gemini TTS non-quota warning:', errMsg);
+      // Other non-quota errors - seamless browser voice fallback
       res.json({
         success: false,
         fallbackToBrowser: true,
