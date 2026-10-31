@@ -12,6 +12,9 @@ import {
   DeviceAction,
 } from './types/tara';
 import { JarvisArcReactor } from './components/JarvisArcReactor';
+import { TaraCharacterAvatar } from './components/TaraCharacterAvatar';
+import { MiraCyberpunkView } from './components/MiraCyberpunkView';
+import { TaraReplicaView } from './components/TaraReplicaView';
 import { JarvisHUDHeader } from './components/JarvisHUDHeader';
 import { DeviceControlHub } from './components/DeviceControlHub';
 import { QuickPrompts } from './components/QuickPrompts';
@@ -60,11 +63,20 @@ export default function App() {
     }
   });
 
+  // Center View Mode: 'replica' (Pixel-perfect replica of uploaded UI), 'mira' (Cyberpunk UI), 'avatar' (2D Avatar), or 'reactor' (Holographic Sci-Fi Core)
+  const [centerViewMode, setCenterViewMode] = useState<'replica' | 'mira' | 'avatar' | 'reactor'>(() => {
+    try {
+      return (localStorage.getItem('tara_center_view') as any) || 'replica';
+    } catch {
+      return 'replica';
+    }
+  });
+
   useEffect(() => {
     try {
-      localStorage.setItem('tara_floating_overlay', String(isFloatingOverlay));
+      localStorage.setItem('tara_center_view', centerViewMode);
     } catch {}
-  }, [isFloatingOverlay]);
+  }, [centerViewMode]);
 
   // Voice & System Configuration with optimized defaults
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
@@ -1051,6 +1063,14 @@ export default function App() {
     );
   }
 
+  if (centerViewMode === 'replica') {
+    return <TaraReplicaView onSwitchView={(mode: any) => setCenterViewMode(mode)} />;
+  }
+
+  if (centerViewMode === 'mira') {
+    return <MiraCyberpunkView onBackToHUD={() => setCenterViewMode('avatar')} />;
+  }
+
   return (
     <div className="relative min-h-screen w-full flex flex-col justify-between bg-[#030712] text-cyan-100 overflow-hidden font-sans">
       {/* Background Holographic Hex Grid & Glow FX */}
@@ -1090,7 +1110,7 @@ export default function App() {
         isFloatingOverlay={isFloatingOverlay}
       />
 
-      {/* Main Center Area: Holographic Arc Reactor */}
+      {/* Main Center Area: Interactive Indian Girl AI Character (Tara) / Holographic Reactor */}
       <main className="relative flex-1 flex flex-col items-center justify-center px-4 py-1 z-10 w-full max-w-lg mx-auto">
         {/* Error notification banner if any */}
         {errorMessage && (
@@ -1101,27 +1121,84 @@ export default function App() {
             </div>
             <button
               onClick={() => setErrorMessage(null)}
-              className="text-red-400 hover:text-red-100 text-xs font-bold px-1"
+              className="text-red-400 hover:text-red-100 text-xs font-bold px-1 cursor-pointer"
             >
               ✕
             </button>
           </div>
         )}
 
-        {/* Central JARVIS Arc Reactor Component */}
-        <JarvisArcReactor
-          state={assistantState}
-          analyserNode={analyserNode}
-          onToggleListen={handleToggleListen}
-          isListening={assistantState === 'listening'}
-          isContinuous={voiceSettings.alwaysOnMic}
-        />
+        {/* View Mode Switcher Pill */}
+        <div className="flex items-center gap-1 mb-1.5 p-1 rounded-full bg-slate-950/75 border border-cyan-500/30 backdrop-blur-md shadow-md text-[11px] font-mono">
+          <button
+            onClick={() => {
+              setCenterViewMode('mira');
+              playJarvisSfx('tap', voiceSettings.sfxEnabled);
+            }}
+            title="Mira AI - साइबरपंक नियॉन मोबाइल UI"
+            className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+              (centerViewMode as string) === 'mira'
+                ? 'bg-gradient-to-r from-[#00ff66] to-emerald-400 text-slate-950 font-bold shadow-[0_0_12px_rgba(0,255,102,0.6)]'
+                : 'text-[#00ff66] hover:text-white hover:bg-[#00ff66]/15'
+            }`}
+          >
+            <span>⚡ Mira UI</span>
+          </button>
+          <button
+            onClick={() => {
+              setCenterViewMode('avatar');
+              playJarvisSfx('tap', voiceSettings.sfxEnabled);
+            }}
+            title="तारा का 2D एनिमेटेड अवतार देखें"
+            className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+              centerViewMode === 'avatar'
+                ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.5)]'
+                : 'text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/40'
+            }`}
+          >
+            <span>✨ तारा अवतार</span>
+          </button>
+          <button
+            onClick={() => {
+              setCenterViewMode('reactor');
+              playJarvisSfx('tap', voiceSettings.sfxEnabled);
+            }}
+            title="जार्विस आर्क रिएक्टर मोड देखें"
+            className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+              centerViewMode === 'reactor'
+                ? 'bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.5)]'
+                : 'text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/40'
+            }`}
+          >
+            <span>⚡ आर्क रिएक्टर</span>
+          </button>
+        </div>
+
+        {/* Dynamic Center Display */}
+        {centerViewMode === 'avatar' ? (
+          <TaraCharacterAvatar
+            state={assistantState}
+            analyserNode={analyserNode}
+            onToggleListen={handleToggleListen}
+            isListening={assistantState === 'listening'}
+            isContinuous={voiceSettings.alwaysOnMic}
+            liveTranscription={liveTranscription}
+          />
+        ) : (
+          <JarvisArcReactor
+            state={assistantState}
+            analyserNode={analyserNode}
+            onToggleListen={handleToggleListen}
+            isListening={assistantState === 'listening'}
+            isContinuous={voiceSettings.alwaysOnMic}
+          />
+        )}
 
         {/* Live Speaking Caption Pill */}
         {assistantState === 'speaking' && (
-          <div className="mt-2 px-4 py-1.5 rounded-full border border-teal-500/40 bg-teal-950/60 text-teal-200 text-xs font-mono flex items-center gap-2 shadow-[0_0_20px_rgba(45,212,191,0.3)] animate-pulse">
+          <div className="mt-1 px-4 py-1.5 rounded-full border border-teal-500/40 bg-teal-950/60 text-teal-200 text-xs font-mono flex items-center gap-2 shadow-[0_0_20px_rgba(45,212,191,0.3)] animate-pulse">
             <Volume2 className="w-3.5 h-3.5 text-teal-300" />
-            <span>टैप करके रोकें (Tap Core to Interrupt)</span>
+            <span>टैप करके रोकें (Tap to Interrupt)</span>
           </div>
         )}
       </main>

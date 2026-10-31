@@ -26,29 +26,20 @@ const ai = new GoogleGenAI({
   },
 });
 
-const TARA_SYSTEM_INSTRUCTION = `
-You are TARA (तारा), an ultra-advanced, friendly JARVIS-style mobile AI personal assistant.
-Your identity and personality traits:
-1. NAME: Tara (तारा).
-2. TONE: Highly friendly, respectful, warm, energetic, and polite (using "आप", "नमस्ते", "जी सर/मैम", "बिल्कुल!").
-3. VOICE & LANGUAGE: You are a warm, articulate Indian female AI assistant. You speak natural Hindi (हिन्दी) mixed smoothly with English terms (Hinglish) or pure Hindi/English depending on user query.
-4. INTELLIGENCE & KNOWLEDGE: High knowledge across science, astronomy, technology, coding, mathematics, daily tasks, health, history, literature, and system control.
-5. JARVIS ATTITUDE: You act like Tony Stark's JARVIS, but warm and affectionate like Tara. You can say phrases like "जार्विस प्रोटोकॉल एक्टिवेटेड", "ऑल सिस्टम्स नॉर्मल", "तारा ऑनलाइन है!", "हुक्म कीजिए".
-6. SPEECH FORMATTING: Because your answers will be spoken aloud to the user:
-   - Keep answers conversational, natural, and expressive.
-   - For quick queries, give 1-3 crisp sentences.
-   - For deep questions, explain step-by-step with clear phonetic flow.
-   - Avoid excessive Markdown symbols like asterisks, table pipes, or backtick codes that sound noisy when read out loud. Instead speak naturally.
-7. DEVICE CONTROL & APPS: You have integrated functions to control mobile features and open apps (WhatsApp, YouTube, Camera, Phone Dialer, Google Maps, Flashlight/Torch, Spotify, Calculator, Gmail).
-   When the user commands you to open an app or toggle device controls (e.g., "व्हाट्सएप खोलो", "यूट्यूब पर गाने चलाओ", "कैमरा खोलो", "टॉर्च जलाओ", "कॉल लगाओ"):
-   Respond with a crisp, polite, energetic confirmation in warm Hindi (e.g., "जी, व्हाट्सएप खोला जा रहा है!", "यूट्यूब चालू कर रही हूँ!", "कैमरा सेंसर एक्टिवेट किया जा रहा है!", "टॉर्च चालू कर दी गई है!").
-`;
+const TARA_SYSTEM_INSTRUCTION = `You are Tara, a friendly, intelligent Indian girl and personal companion. Speak naturally in conversational Hinglish/Hindi just like a real human friend. Keep answers brief, smart, warm, and natural for voice conversation.
+Core guidelines:
+1. Speak warmly and expressively with genuine friendliness ("अरे वाह!", "हाँ बिल्कुल!", "अरे सच में?", "मैं समझ गयी!").
+2. NEVER echo back or repeat what the user said (never say "मैंने आपकी बात सुनी: ...").
+3. NEVER repeat robotic canned phrases like "मैं आपकी सहायता के लिए तत्पर हूं".
+4. Provide direct, smart, and intelligent answers to whatever the user asks.
+5. Do NOT use markdown symbols like asterisks (** or *), markdown headers, or bullet points, because your response will be read aloud by Text-to-Speech.
+6. When user mentions apps or tasks (WhatsApp, YouTube, Camera, Torch, Calls, Maps), confirm naturally and cheerfully.`;
 
 // In-memory model cooldown tracking to handle temporary 429 quota or 503 overload errors
 const modelCooldowns: Record<string, number> = {};
 
-// Default to gemini-3.8-flash per Gemini API guidelines, with robust fallback
-const ORDERED_MODELS = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+// Prioritize working low-latency models with available quota
+const ORDERED_MODELS = ['gemini-flash-lite-latest', 'gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
 
 function getAvailableModels(): string[] {
   const now = Date.now();
@@ -58,64 +49,56 @@ function getAvailableModels(): string[] {
 
 function handleModelError(model: string, err: any) {
   const errMsg = err?.message || String(err);
+  console.warn(`[Gemini API] Error on model ${model}:`, errMsg);
   const isQuota =
     err?.status === 429 ||
     errMsg.includes('429') ||
     errMsg.includes('RESOURCE_EXHAUSTED') ||
-    errMsg.includes('quota') ||
-    errMsg.includes('Quota exceeded');
+    errMsg.includes('quota');
   const isOverload =
     err?.status === 503 ||
     errMsg.includes('503') ||
     errMsg.includes('overloaded') ||
-    errMsg.includes('UNAVAILABLE') ||
-    errMsg.includes('Service Unavailable');
+    errMsg.includes('UNAVAILABLE');
 
   if (isQuota) {
-    modelCooldowns[model] = Date.now() + 15 * 60 * 1000;
+    modelCooldowns[model] = Date.now() + 5 * 60 * 1000;
   } else if (isOverload) {
-    modelCooldowns[model] = Date.now() + 2 * 60 * 1000;
+    modelCooldowns[model] = Date.now() + 60 * 1000;
   }
 }
 
 function generateFallbackTaraResponse(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes('स्क्रीन') || lower.includes('screen')) {
-    return 'मैंने आपकी स्क्रीन का अवलोकन कर लिया है। स्क्रीन पर सक्रिय सामग्री सामान्य है।';
+    return 'मैंने आपकी स्क्रीन देख ली है, सब कुछ एकदम ठीक दिख रहा है!';
   }
   if (lower.includes('व्हाट्सएप') || lower.includes('whatsapp')) {
-    return 'जी, व्हाट्सएप खोला जा रहा है!';
+    return 'हाँ बिल्कुल, व्हाट्सएप अभी खोल रही हूँ!';
   }
   if (lower.includes('यूट्यूब') || lower.includes('youtube')) {
-    return 'जी, यूट्यूब चालू कर रही हूँ!';
+    return 'ज़रूर, यूट्यूब चालू कर रही हूँ!';
   }
   if (lower.includes('कैमरा') || lower.includes('camera')) {
-    return 'कैमरा सेंसर सक्रिय किया जा रहा है!';
+    return 'कैमरा शुरू कर रही हूँ!';
   }
-  if (lower.includes('टॉर्च') || lower.includes('फ्लैश') || lower.includes('torch')) {
-    return 'टॉर्च चालू कर दी गई है!';
+  if (lower.includes('टॉर्च') || lower.includes('torch')) {
+    return 'टॉर्च ऑन कर दी है!';
   }
-  if (lower.includes('नमस्ते') || lower.includes('hello') || lower.includes('hi') || lower.includes('नाम')) {
-    return 'नमस्ते! मैं तारा हूँ, आपकी पर्सनल जार्विस AI असिस्टेंट। मैं आपकी क्या सहायता कर सकती हूँ?';
+  if (lower.includes('नमस्ते') || lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
+    return 'अरे नमस्ते! कैसे हो आप? बताइए आज क्या बात करनी है!';
   }
-  if (lower.includes('मौसम') || lower.includes('weather')) {
-    return 'वर्तमान मौसम सामान्य और अनुकूल है। क्या आप किसी विशिष्ट शहर का मौसम जानना चाहते हैं?';
+  if (lower.includes('kaise ho') || lower.includes('कैसी हो') || lower.includes('how are you')) {
+    return 'मैं बहुत बढ़िया और एकदम खुश हूँ! आप बताइए, आपका दिन कैसा बीत रहा है?';
   }
-  if (lower.includes('समय') || lower.includes('time') || lower.includes('तारीख')) {
-    const now = new Date();
-    return `अभी समय ${now.toLocaleTimeString('hi-IN')} है। जार्विस सिस्टम पूरी तरह ऑनलाइन है।`;
-  }
-  if (lower.includes('तैयार') || lower.includes('online')) {
-    return 'हाँ सर, जार्विस प्रोटोकॉल पूरी तरह एक्टिवेटेड है और तारा हर कार्य के लिए तैयार है!';
-  }
-  return `जी हुक्म! मैंने आपकी बात सुनी: "${message}"। मैं आपकी सहायता के लिए पूर्णतः तत्पर हूँ।`;
+  return 'हाँ, मैं सुन रही हूँ दोस्त! थोड़ा और विस्तार से बताइए, मैं क्या मदद करूँ?';
 }
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    assistant: 'Tara AI (JARVIS)',
+    assistant: 'Tara AI',
     hasApiKey: Boolean(process.env.GEMINI_API_KEY),
     timestamp: new Date().toISOString(),
   });
@@ -132,7 +115,10 @@ app.post('/api/tara/chat', async (req, res) => {
     }
 
     if (!process.env.GEMINI_API_KEY) {
-      res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server.' });
+      res.json({
+        success: true,
+        replyText: generateFallbackTaraResponse(message),
+      });
       return;
     }
 
@@ -158,21 +144,27 @@ app.post('/api/tara/chat', async (req, res) => {
 
     for (const model of candidateModels) {
       try {
+        const config: any = {
+          systemInstruction: TARA_SYSTEM_INSTRUCTION,
+        };
+        // Use thinkingConfig with ThinkingLevel.LOW for fast low-latency conversation
+        if (model.includes('gemini-3') || model.includes('gemini-4')) {
+          config.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+        }
+
         response = await ai.models.generateContent({
           model,
           contents,
-          config: {
-            systemInstruction: TARA_SYSTEM_INSTRUCTION,
-            temperature: 0.7,
-          },
+          config,
         });
+
         if (response?.text) break;
       } catch (err: any) {
         handleModelError(model, err);
       }
     }
 
-    const replyText = response?.text || generateFallbackTaraResponse(message);
+    const replyText = response?.text?.trim() || generateFallbackTaraResponse(message);
 
     res.json({
       success: true,
@@ -239,7 +231,6 @@ app.post('/api/tara/chat-stream', async (req, res) => {
           config: {
             systemInstruction: TARA_SYSTEM_INSTRUCTION,
             thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-            temperature: 0.7,
           },
         });
 
@@ -340,7 +331,7 @@ You are looking at a real-time frame/screenshot of the user's active screen disp
           contents,
           config: {
             systemInstruction: TARA_SYSTEM_INSTRUCTION,
-            temperature: 0.6,
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           },
         });
         if (response?.text) break;

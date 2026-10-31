@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Mira AI - Cyberpunk Neon Voice Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* 1. RESET & BASE THEME */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: #050508;
+      color: #ffffff;
+      font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      padding: 12px;
+    }
+
+    /* Ambient Background Glow */
+    .bg-glow-orb-green {
+      position: fixed;
+      top: 15%;
+      left: 10%;
+      width: 280px;
+      height: 280px;
+      background: rgba(0, 255, 102, 0.12);
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-glow-orb-purple {
+      position: fixed;
+      bottom: 15%;
+      right: 10%;
+      width: 280px;
+      height: 280px;
+      background: rgba(147, 51, 234, 0.15);
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 2. PHONE FRAME CONTAINER WITH RGB NEON BORDER */
+    .phone-container {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      height: 92vh;
+      max-height: 860px;
+      background: #0a0a10;
+      border-radius: 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      z-index: 10;
+      border: 2px solid transparent;
+      background-clip: padding-box, border-box;
+      background-origin: padding-box, border-box;
+      background-image: 
+        linear-gradient(#0a0a10, #0a0a10),
+        linear-gradient(135deg, #00ff66 0%, #9333ea 50%, #00ff66 100%);
+      box-shadow: 
+        0 0 45px rgba(0, 255, 102, 0.22),
+        0 0 80px rgba(147, 51, 234, 0.15),
+        inset 0 0 25px rgba(0, 255, 102, 0.05);
+    }
+
+    /* Dynamic Island / Camera Notch */
+    .phone-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 16px;
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      z-index: 50;
+    }
+
+    .notch-dot-green {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00ff66;
+      box-shadow: 0 0 8px #00ff66;
+      animation: pulse 1.5s infinite;
+    }
+
+    .notch-dot-blue {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #06b6d4;
+    }
+
+    /* 3. TOP HEADER */
+    .top-header {
+      padding: 28px 20px 8px 20px;
+      position: relative;
+      z-index: 20;
+    }
+
+    .header-main-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .brand-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      background: linear-gradient(90deg, #00ff66, #34d399, #22d3ee);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 16px rgba(0, 255, 102, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: rgba(0, 255, 102, 0.15);
+      border: 1px solid rgba(0, 255, 102, 0.4);
+      color: #00ff66;
+      font-family: monospace;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .sub-status-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 3px;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #00ff66;
+      box-shadow: 0 0 8px #00ff66;
+      animation: ping 1.8s infinite;
+    }
+
+    .live-text {
+      font-size: 10px;
+      font-family: monospace;
+      letter-spacing: 1.2px;
+      color: rgba(0, 255, 102, 0.85);
+      font-weight: 700;
+    }
+
+    /* 4 Circular Header Buttons */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .neon-circle-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(0, 255, 102, 0.3);
+      color: #00ff66;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-size: 14px;
+    }
+
+    .neon-circle-btn:hover {
+      transform: scale(1.12);
+      border-color: #00ff66;
+      box-shadow: 0 0 14px rgba(0, 255, 102, 0.6);
+      background: rgba(0, 255, 102, 0.15);
+    }
+
+    .neon-circle-btn.purple-btn {
+      border-color: rgba(168, 85, 247, 0.4);
+      color: #c084fc;
+    }
+
+    .neon-circle-btn.purple-btn:hover {
+      border-color: #c084fc;
+      box-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
+    }
+
+    /* Greeting Row */
+    .greeting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+    }
+
+    .greeting-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #e2e8f0;
+      letter-spacing: 0.5px;
+    }
+
+    .greeting-sub {
+      font-size: 11px;
+      color: #64748b;
+      font-family: monospace;
+    }
+
+    /* Status Chip */
+    .status-chip {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: monospace;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 255, 102, 0.3);
+      background: rgba(0, 255, 102, 0.1);
+      color: #00ff66;
+      box-shadow: 0 0 12px rgba(0, 255, 102, 0.25);
+      transition: all 0.3s;
+    }
+
+    .status-chip.speaking {
+      background: rgba(0, 255, 102, 0.2);
+      border-color: #00ff66;
+      box-shadow: 0 0 18px rgba(0, 255, 102, 0.5);
+    }
+
+    .status-chip.listening {
+      background: rgba(6, 182, 212, 0.2);
+      border-color: #06b6d4;
+      color: #22d3ee;
+      box-shadow: 0 0 18px rgba(6, 182, 212, 0.5);
+    }
+
+    .status-chip.processing {
+      background: rgba(147, 51, 234, 0.25);
+      border-color: #c084fc;
+      color: #d8b4fe;
+      box-shadow: 0 0 18px rgba(168, 85, 247, 0.5);
+    }
+
+    /* 4. CENTER AVATAR SECTION */
+    .avatar-center-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      flex: 1;
+    }
+
+    .avatar-glow-pulse {
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 255, 102, 0.4) 0%, rgba(217, 70, 239, 0.3) 50%, transparent 70%);
+      filter: blur(40px);
+      pointer-events: none;
+      transition: all 0.6s ease;
+      animation: breathPulse 3.5s infinite ease-in-out;
+    }
+
+    .avatar-circle-frame {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      padding: 4px;
+      background: #030712;
+      border: 2.5px solid #00ff66;
+      box-shadow: 
+        0 0 35px rgba(0, 255, 102, 0.5),
+        0 0 60px rgba(217, 70, 239, 0.25),
+        inset 0 0 20px rgba(0, 255, 102, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .avatar-circle-frame:hover {
+      transform: scale(1.04);
+      box-shadow: 0 0 45px rgba(0, 255, 102, 0.8), 0 0 70px rgba(217, 70, 239, 0.4);
+    }
+
+    .avatar-circle-frame.speaking {
+      animation: speakingScale 0.6s infinite alternate ease-in-out;
+      border-color: #00ff66;
+      box-shadow: 0 0 50px rgba(0, 255, 102, 0.9), 0 0 80px rgba(217, 70, 239, 0.6);
+    }
+
+    .avatar-circle-frame.listening {
+      border-color: #22d3ee;
+      box-shadow: 0 0 45px rgba(34, 211, 238, 0.9);
+      animation: listeningWiggle 1.5s infinite ease-in-out;
+    }
+
+    .avatar-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+      border-radius: 50%;
+      display: block;
+      transition: transform 0.4s ease, filter 0.4s ease;
+    }
+
+    .avatar-circle-frame.speaking .avatar-photo {
+      transform: scale(1.05);
+      filter: brightness(1.1) contrast(1.05);
+    }
+
+    .avatar-photo-vignette {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.65) 0%, transparent 40%);
+      pointer-events: none;
+    }
+
+    .avatar-cyber-bindi {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #00ff66;
+      box-shadow: 0 0 8px #00ff66, 0 0 16px #00ff66;
+      pointer-events: none;
+      animation: pulse 1.2s infinite;
+    }
+
+    .speaking-wave-bars {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      align-items: center;
+      gap: 3px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid rgba(0, 255, 102, 0.5);
+      backdrop-filter: blur(8px);
+    }
+
+    .avatar-circle-frame.speaking .speaking-wave-bars {
+      display: flex;
+    }
+
+    .wave-bar {
+      width: 3px;
+      border-radius: 2px;
+      background: #00ff66;
+      animation: bounce 0.6s infinite alternate;
+    }
+
+    .avatar-sub-chip {
+      margin-top: 10px;
+      padding: 4px 14px;
+      border-radius: 20px;
+      background: rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(0, 255, 102, 0.35);
+      font-size: 11px;
+      font-family: monospace;
+      color: #00ff66;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 12px rgba(0, 255, 102, 0.15);
+    }
+
+    /* 5. GLASSMORPHIC LIVE SUBTITLES CARD */
+    .dialogue-glass-card {
+      width: 100%;
+      max-width: 370px;
+      margin-top: 12px;
+      padding: 14px 16px;
+      border-radius: 20px;
+      background: rgba(13, 22, 18, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 255, 102, 0.28);
+      box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.6),
+        0 0 20px rgba(0, 255, 102, 0.12);
+    }
+
+    .dialogue-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 6px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid rgba(0, 255, 102, 0.15);
+      font-size: 11px;
+      font-family: monospace;
+    }
+
+    .dialogue-badge-tara {
+      color: #00ff66;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    .dialogue-badge-status {
+      color: #64748b;
+      font-size: 10px;
+    }
+
+    .user-transcript-line {
+      font-size: 12px;
+      font-family: monospace;
+      color: #22d3ee;
+      background: rgba(6, 182, 212, 0.12);
+      padding: 4px 8px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+
+    .dialogue-text-body {
+      font-size: 14px;
+      line-height: 1.45;
+      color: #f1f5f9;
+      min-height: 44px;
+      letter-spacing: 0.2px;
+    }
+
+    .typewriter-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 14px;
+      background: #00ff66;
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink 0.8s infinite;
+    }
+
+    /* 6. BOTTOM CONTROLS & NAVIGATION */
+    .bottom-section {
+      position: relative;
+      z-index: 20;
+      padding: 0 16px 20px 16px;
+    }
+
+    /* Big Glowing Center Mic Button */
+    .center-mic-wrapper {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      margin-bottom: -28px;
+      z-index: 30;
+    }
+
+    .glowing-mic-btn {
+      position: relative;
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00ff66, #10b981);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 
+        0 0 30px rgba(0, 255, 102, 0.7),
+        0 0 50px rgba(0, 255, 102, 0.35);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .glowing-mic-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 45px rgba(0, 255, 102, 0.9);
+    }
+
+    .glowing-mic-btn.active {
+      background: linear-gradient(135deg, #22d3ee, #00ff66);
+      box-shadow: 0 0 45px rgba(34, 211, 238, 0.9);
+      animation: pulse 1s infinite;
+    }
+
+    .mic-inner-core {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #050508;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #00ff66;
+    }
+
+    /* Ripple waves on Mic click */
+    .mic-ripple {
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 2px solid #00ff66;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .glowing-mic-btn.active .mic-ripple {
+      animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    /* 5-Item Navigation Bar */
+    .bottom-navbar {
+      background: rgba(9, 13, 11, 0.92);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(0, 255, 102, 0.25);
+      border-radius: 30px;
+      padding: 32px 14px 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      background: transparent;
+      border: none;
+      color: #64748b;
+      font-size: 10px;
+      font-family: monospace;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 4px 8px;
+      border-radius: 12px;
+    }
+
+    .nav-item svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      color: #00ff66;
+      transform: scale(1.08);
+      filter: drop-shadow(0 0 8px rgba(0, 255, 102, 0.8));
+    }
+
+    .nav-mic-spacer {
+      width: 44px;
+    }
+
+    /* 7. ANIMATIONS */
+    @keyframes breathPulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.15); opacity: 0.85; }
+    }
+
+    @keyframes speakingScale {
+      0% { transform: scale(1.02); }
+      100% { transform: scale(1.06); }
+    }
+
+    @keyframes listeningWiggle {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes ping {
+      75%, 100% {
+        transform: scale(1.6);
+        opacity: 0;
+      }
+    }
+
+    @keyframes pulse {
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Lights -->
+  <div class="bg-glow-orb-green"></div>
+  <div class="bg-glow-orb-purple"></div>
+
+  <!-- Main Cyber Mobile Frame -->
+  <div class="phone-container">
+    
+    <!-- Notch / Dynamic Island -->
+    <div class="phone-notch">
+      <div class="notch-dot-green"></div>
+      <div class="notch-dot-blue"></div>
+    </div>
+
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="header-main-row">
+        <div>
+          <div class="brand-title">
+            <span id="titleText">Tara</span>
+            <span class="brand-badge">AI</span>
+          </div>
+          <div class="sub-status-row">
+            <div class="live-dot"></div>
+            <span class="live-text">PERSONAL AI • LIVE</span>
+          </div>
+        </div>
+
+        <!-- 4 Circular Neon Header Buttons -->
+        <div class="header-actions">
+          <!-- 1. Play Button -->
+          <button class="neon-circle-btn" id="btnPlay" title="Play / Speak Dialogue">▶</button>
+          <!-- 2. Refresh Button -->
+          <button class="neon-circle-btn purple-btn" id="btnRefresh" title="Refresh Connection">⟳</button>
+          <!-- 3. Music Ambient Toggle -->
+          <button class="neon-circle-btn" id="btnMusic" title="Ambient Cyber Sound">♪</button>
+          <!-- 4. Profile Button -->
+          <button class="neon-circle-btn" id="btnProfile" title="Profile">👤</button>
+        </div>
+      </div>
+
+      <!-- Greeting & Status Chip -->
+      <div class="greeting-row">
+        <div>
+          <div class="greeting-title" id="greetingUser">Good morning, Ajeet</div>
+          <div class="greeting-sub">Cyberpunk Mobile Interface</div>
+        </div>
+        <div class="status-chip" id="statusChip">
+          <span style="font-size: 8px;">●</span>
+          <span id="statusText">Idle</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Center Display: Avatar Section -->
+    <main class="avatar-center-wrapper">
+      <div class="avatar-glow-pulse" id="avatarGlow"></div>
+
+      <!-- Ultra-Realistic Photorealistic Portrait Avatar (NO CARTOON, NO ANIME) -->
+      <div class="avatar-circle-frame" id="avatarCircle">
+        <img
+          src="https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80"
+          alt="Tara - Photorealistic AI Companion"
+          class="avatar-photo"
+          id="avatarPhoto"
+          onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80'"
+        />
+        <!-- Vignette Shadow -->
+        <div class="avatar-photo-vignette"></div>
+        <!-- Cyber Bindi Dot -->
+        <div class="avatar-cyber-bindi"></div>
+        <!-- Speech Audio Wave Bars Overlay -->
+        <div class="speaking-wave-bars">
+          <div class="wave-bar" style="height: 10px; animation-delay: 0s;"></div>
+          <div class="wave-bar" style="height: 18px; animation-delay: 0.15s; background: #22d3ee;"></div>
+          <div class="wave-bar" style="height: 14px; animation-delay: 0.3s; background: #d946ef;"></div>
+          <div class="wave-bar" style="height: 18px; animation-delay: 0.1s;"></div>
+          <div class="wave-bar" style="height: 8px; animation-delay: 0.25s; background: #22d3ee;"></div>
+        </div>
+      </div>
+
+      <!-- Chip below avatar -->
+      <div class="avatar-sub-chip">
+        <span>⚡</span>
+        <span id="avatarTip">Tap avatar or mic to speak</span>
+      </div>
+
+      <!-- Live Subtitles / Dialogue Glassmorphic Box -->
+      <div class="dialogue-glass-card">
+        <div class="dialogue-card-header">
+          <span class="dialogue-badge-tara">✨ Tara AI</span>
+          <span class="dialogue-badge-status" id="dialogueStatus">LIVE RESPONSE</span>
+        </div>
+        <div id="userLineBox" class="user-transcript-line" style="display: none;">
+          <strong>You:</strong> <span id="userLineText"></span>
+        </div>
+        <div class="dialogue-text-body">
+          <strong style="color: #00ff66;">Tara:</strong>
+          <span id="speechOutputText">Hey there! Good to hear your voice. Kaise ho aap?</span>
+          <span class="typewriter-cursor" id="typewriterCursor"></span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Controls & 5-Item Navigation -->
+    <footer class="bottom-section">
+      <!-- Big Glowing Center Voice / Wave Mic Button -->
+      <div class="center-mic-wrapper">
+        <button class="glowing-mic-btn" id="btnMic">
+          <div class="mic-ripple"></div>
+          <div class="mic-inner-core">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+          </div>
+        </button>
+      </div>
+
+      <!-- 5-Item Neon Navbar -->
+      <nav class="bottom-navbar">
+        <!-- 1. Home -->
+        <button class="nav-item active" data-tab="home">
+          <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Home</span>
+        </button>
+
+        <!-- 2. Chat -->
+        <button class="nav-item" data-tab="chat">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Chat</span>
+        </button>
+
+        <!-- Spacer for center mic button -->
+        <div class="nav-mic-spacer"></div>
+
+        <!-- 4. Camera -->
+        <button class="nav-item" data-tab="camera">
+          <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>Vision</span>
+        </button>
+
+        <!-- 5. Settings -->
+        <button class="nav-item" data-tab="settings">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Setup</span>
+        </button>
+      </nav>
+    </footer>
+
+  </div>
+
+  <!-- VANILLA JAVASCRIPT LOGIC -->
+  <script>
+    (function() {
+      // Elements
+      const btnMic = document.getElementById('btnMic');
+      const avatarCircle = document.getElementById('avatarCircle');
+      const avatarPhoto = document.getElementById('avatarPhoto');
+      const avatarGlow = document.getElementById('avatarGlow');
+      const statusChip = document.getElementById('statusChip');
+      const statusText = document.getElementById('statusText');
+      const speechOutputText = document.getElementById('speechOutputText');
+      const typewriterCursor = document.getElementById('typewriterCursor');
+      const userLineBox = document.getElementById('userLineBox');
+      const userLineText = document.getElementById('userLineText');
+      const avatarTip = document.getElementById('avatarTip');
+      const greetingUser = document.getElementById('greetingUser');
+      const btnPlay = document.getElementById('btnPlay');
+      const btnRefresh = document.getElementById('btnRefresh');
+      const btnMusic = document.getElementById('btnMusic');
+      const btnProfile = document.getElementById('btnProfile');
+
+      let currentStatus = 'idle'; // 'idle' | 'listening' | 'speaking'
+      let typewriterTimer = null;
+      let activeSpeech = 'Hey there! Good to hear your voice. Kaise ho aap? I am your personal cyber AI, ready for anything!';
+      let audioCtx = null;
+      let synthOsc = null;
+      let isMusicOn = false;
+
+      // Greeting based on current hour
+      const hour = new Date().getHours();
+      let timeGreeting = 'Good morning';
+      if (hour >= 12 && hour < 17) timeGreeting = 'Good afternoon';
+      else if (hour >= 17 && hour < 22) timeGreeting = 'Good evening';
+      else if (hour >= 22 || hour < 5) timeGreeting = 'Good night';
+      greetingUser.textContent = `${timeGreeting}, Ajeet`;
+
+      // Typewriter Effect
+      function typewriteText(text, callback) {
+        if (typewriterTimer) clearInterval(typewriterTimer);
+        speechOutputText.textContent = '';
+        typewriterCursor.style.display = 'inline-block';
+        let idx = 0;
+        typewriterTimer = setInterval(() => {
+          if (idx < text.length) {
+            speechOutputText.textContent = text.slice(0, idx + 1);
+            idx++;
+          } else {
+            clearInterval(typewriterTimer);
+            if (callback) callback();
+          }
+        }, 28);
+      }
+
+      // Initial Typewrite
+      typewriteText(activeSpeech);
+
+      let silenceTimer = null;
+
+      // Status Updater
+      function setStatus(status) {
+        currentStatus = status;
+        statusChip.className = 'status-chip';
+        avatarCircle.className = 'avatar-circle-frame';
+        btnMic.classList.remove('active');
+
+        if (status === 'speaking') {
+          statusChip.classList.add('speaking');
+          avatarCircle.classList.add('speaking');
+          statusText.textContent = 'Speaking...';
+          avatarTip.textContent = 'Tara is speaking • Tap to pause';
+          const badge = document.getElementById('dialogueStatus');
+          if (badge) badge.textContent = 'SPEAKING';
+        } else if (status === 'listening') {
+          statusChip.classList.add('listening');
+          avatarCircle.classList.add('listening');
+          btnMic.classList.add('active');
+          statusText.textContent = 'Listening...';
+          avatarTip.textContent = 'Listening to your voice...';
+          const badge = document.getElementById('dialogueStatus');
+          if (badge) badge.textContent = 'LISTENING';
+        } else if (status === 'processing') {
+          statusChip.classList.add('processing');
+          statusText.textContent = 'Thinking...';
+          avatarTip.textContent = 'Generating intelligent response...';
+          const badge = document.getElementById('dialogueStatus');
+          if (badge) badge.textContent = 'THINKING';
+        } else {
+          statusText.textContent = 'Idle';
+          avatarTip.textContent = 'Tap avatar or mic to speak';
+          const badge = document.getElementById('dialogueStatus');
+          if (badge) badge.textContent = 'READY';
+        }
+      }
+
+      // Preload SpeechSynthesis voices
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
+
+      // Speech Synthesis (Text to Speech) with Reactive Audio Frequency Waves
+      function speak(text) {
+        if (!('speechSynthesis' in window)) {
+          typewriteText(text);
+          return;
+        }
+
+        window.speechSynthesis.cancel();
+        setStatus('speaking');
+
+        const cleanText = text.replace(/[*#_`>]/g, ' ').trim();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.1;
+
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice =
+          voices.find(v => v.lang.startsWith('hi') && (v.name.includes('Google') || v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Swara') || v.name.includes('Lekha') || v.name.includes('Kalpana'))) ||
+          voices.find(v => v.lang.includes('IN') && (v.name.toLowerCase().includes('female') || v.name.includes('Neerja') || v.name.includes('Priya'))) ||
+          voices.find(v => v.lang.startsWith('hi')) ||
+          voices.find(v => v.lang.includes('IN')) ||
+          voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female')) ||
+          voices.find(v => v.lang.startsWith('en'));
+
+        if (preferredVoice) utterance.voice = preferredVoice;
+        else utterance.lang = 'hi-IN';
+
+        // Neon Aura Wave modulation during AI speech
+        let wavePulse = setInterval(() => {
+          if (currentStatus === 'speaking') {
+            const scale = 1.05 + Math.random() * 0.22;
+            const op = 0.5 + Math.random() * 0.45;
+            if (avatarGlow) {
+              avatarGlow.style.transform = `scale(${scale})`;
+              avatarGlow.style.opacity = op;
+            }
+          }
+        }, 110);
+
+        utterance.onstart = () => {
+          typewriteText(text);
+        };
+
+        utterance.onend = () => {
+          clearInterval(wavePulse);
+          if (avatarGlow) {
+            avatarGlow.style.transform = 'scale(1)';
+            avatarGlow.style.opacity = '0.5';
+          }
+          setStatus('idle');
+        };
+
+        utterance.onerror = () => {
+          clearInterval(wavePulse);
+          if (avatarGlow) {
+            avatarGlow.style.transform = 'scale(1)';
+            avatarGlow.style.opacity = '0.5';
+          }
+          setStatus('idle');
+        };
+
+        window.speechSynthesis.speak(utterance);
+      }
+
+      // Speech Recognition (Speech to Text)
+      let recognition = null;
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      function startListening() {
+        if (!SpeechRecognition) {
+          alert('Web SpeechRecognition इस ब्राउज़र में समर्थित नहीं है।');
+          return;
+        }
+
+        if (currentStatus === 'speaking') {
+          window.speechSynthesis.cancel();
+          setStatus('idle');
+          return;
+        }
+
+        window.speechSynthesis.cancel();
+        if (silenceTimer) clearTimeout(silenceTimer);
+
+        recognition = new SpeechRecognition();
+        recognition.lang = 'hi-IN';
+        recognition.interimResults = true;
+        recognition.continuous = true;
+
+        setStatus('listening');
+        userLineBox.style.display = 'block';
+        userLineText.textContent = '...सुन रही हूँ...';
+        let latestSpoken = '';
+
+        recognition.onresult = (event) => {
+          let transcript = '';
+          let hasFinal = false;
+
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript + ' ';
+            if (event.results[i].isFinal) hasFinal = true;
+          }
+
+          const clean = transcript.trim();
+          latestSpoken = clean;
+          userLineText.textContent = clean;
+
+          if (silenceTimer) clearTimeout(silenceTimer);
+          silenceTimer = setTimeout(() => {
+            if (latestSpoken && currentStatus === 'listening') {
+              try { recognition.stop(); } catch(_) {}
+              handleUserQuery(latestSpoken);
+            }
+          }, 1100);
+
+          if (hasFinal && clean.length > 2) {
+            if (silenceTimer) clearTimeout(silenceTimer);
+            try { recognition.stop(); } catch(_) {}
+            handleUserQuery(clean);
+          }
+        };
+
+        recognition.onerror = (e) => {
+          if (latestSpoken && currentStatus === 'listening') {
+            handleUserQuery(latestSpoken);
+          } else {
+            setStatus('idle');
+          }
+        };
+
+        recognition.onend = () => {
+          if (currentStatus === 'listening') {
+            if (latestSpoken) {
+              handleUserQuery(latestSpoken);
+            } else {
+              setStatus('idle');
+            }
+          }
+        };
+
+        try {
+          recognition.start();
+        } catch (e) {
+          setStatus('idle');
+        }
+      }
+
+      // Handle user's question via real Gemini API
+      async function handleUserQuery(query) {
+        const trimmed = (query || '').trim();
+        if (!trimmed) {
+          setStatus('idle');
+          return;
+        }
+
+        if (silenceTimer) clearTimeout(silenceTimer);
+        setStatus('processing');
+        userLineBox.style.display = 'block';
+        userLineText.textContent = trimmed;
+
+        try {
+          const res = await fetch('/api/tara/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: trimmed })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const reply = data.replyText || 'हाँ बिल्कुल, मैं आपकी बात समझ गयी!';
+            activeSpeech = reply;
+            speak(reply);
+          } else {
+            throw new Error('API response failed');
+          }
+        } catch (err) {
+          const fallback = `अरे Ajeet! मैं सुन रही हूँ। आज आप क्या जानना चाहते हैं?`;
+          activeSpeech = fallback;
+          speak(fallback);
+        }
+      }
+
+      // Mic Button Click
+      btnMic.addEventListener('click', () => {
+        if (currentStatus === 'listening') {
+          if (recognition) recognition.stop();
+          setStatus('idle');
+        } else {
+          startListening();
+        }
+      });
+
+      // Avatar Click
+      avatarCircle.addEventListener('click', () => {
+        if (currentStatus === 'speaking') {
+          window.speechSynthesis.cancel();
+          setStatus('idle');
+        } else {
+          startListening();
+        }
+      });
+
+      // Header Buttons
+      btnPlay.addEventListener('click', () => {
+        if (currentStatus === 'speaking') {
+          window.speechSynthesis.cancel();
+          setStatus('idle');
+        } else {
+          speak(activeSpeech);
+        }
+      });
+
+      btnRefresh.addEventListener('click', () => {
+        window.speechSynthesis.cancel();
+        activeSpeech = 'Cyber link refreshed! ऑल सिस्टम्स नॉर्मल। हुक्म कीजिए Ajeet!';
+        speak(activeSpeech);
+      });
+
+      // Ambient Cyber Synth sound
+      btnMusic.addEventListener('click', () => {
+        if (isMusicOn) {
+          if (synthOsc) {
+            try { synthOsc.stop(); } catch(_) {}
+            synthOsc = null;
+          }
+          isMusicOn = false;
+          btnMusic.style.borderColor = 'rgba(0, 255, 102, 0.3)';
+          btnMusic.style.boxShadow = 'none';
+        } else {
+          try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(146.83, audioCtx.currentTime); // D3
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            synthOsc = osc;
+            isMusicOn = true;
+            btnMusic.style.borderColor = '#00ff66';
+            btnMusic.style.boxShadow = '0 0 14px #00ff66';
+          } catch(e) {}
+        }
+      });
+
+      btnProfile.addEventListener('click', () => {
+        const newName = prompt('Enter User Name:', 'Ajeet');
+        if (newName) {
+          greetingUser.textContent = `${timeGreeting}, ${newName}`;
+        }
+      });
+
+      // Nav Tabs
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        item.addEventListener('click', () => {
+          navItems.forEach(n => n.classList.remove('active'));
+          item.classList.add('active');
+        });
+      });
+
+    })();
+  </script>
+</body>
+</html>

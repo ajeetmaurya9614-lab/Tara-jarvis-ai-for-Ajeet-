@@ -180,22 +180,37 @@ export function speakWithBrowserHindi(
     const safetyTimeout = setTimeout(safeResolve, estimatedDurationMs + 1200);
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.rate = options.rate || 1.05;
-    utterance.pitch = options.pitch || 1.1; // Slightly higher pitch for warm female tone
+    utterance.rate = options.rate || 1.02; // Natural, human conversational pace
+    utterance.pitch = options.pitch || 1.08; // Warm, friendly female pitch
 
-    // Select the best Hindi or Indian English female voice
+    // Prioritize high-definition neural and natural Indian female voices
     const voices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
-    const hindiVoice = voices.find(
-      (v) =>
-        (v.lang.startsWith('hi') || v.lang.includes('IN')) &&
-        (v.name.toLowerCase().includes('female') ||
-          v.name.toLowerCase().includes('lekha') ||
-          v.name.toLowerCase().includes('swara') ||
-          v.name.toLowerCase().includes('google हिन्दी') ||
-          v.name.toLowerCase().includes('hindi'))
-    ) || voices.find((v) => v.lang.startsWith('hi'))
-      || voices.find((v) => v.lang.includes('en-IN') && v.name.toLowerCase().includes('female'))
-      || voices.find((v) => v.lang.startsWith('en'));
+    const hindiVoice =
+      voices.find(
+        (v) =>
+          v.lang.startsWith('hi') &&
+          (v.name.toLowerCase().includes('natural') ||
+            v.name.toLowerCase().includes('swara') ||
+            v.name.toLowerCase().includes('lekha') ||
+            v.name.toLowerCase().includes('neerja') ||
+            v.name.toLowerCase().includes('google हिन्दी') ||
+            v.name.toLowerCase().includes('female'))
+      ) ||
+      voices.find((v) => v.lang.startsWith('hi')) ||
+      voices.find(
+        (v) =>
+          v.lang.includes('IN') &&
+          (v.name.toLowerCase().includes('female') ||
+            v.name.toLowerCase().includes('natural') ||
+            v.name.toLowerCase().includes('veena') ||
+            v.name.toLowerCase().includes('heera') ||
+            v.name.toLowerCase().includes('neerja') ||
+            v.name.toLowerCase().includes('swara'))
+      ) ||
+      voices.find((v) => v.lang.includes('IN')) ||
+      voices.find((v) => v.lang.startsWith('hi')) ||
+      voices.find((v) => v.lang.startsWith('en') && v.name.toLowerCase().includes('female')) ||
+      voices.find((v) => v.lang.startsWith('en'));
 
     if (hindiVoice) {
       utterance.voice = hindiVoice;

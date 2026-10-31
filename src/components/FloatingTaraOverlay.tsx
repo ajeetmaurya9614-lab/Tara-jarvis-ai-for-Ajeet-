@@ -112,40 +112,61 @@ export const FloatingTaraOverlay: React.FC<FloatingTaraOverlayProps> = ({
           </div>
         </div>
 
-        {/* Mini Arc Reactor Button */}
+        {/* Mini Tara Animated Character Button */}
         <button
           onClick={onToggleListen}
           title={isListening ? 'सुनना रोकें' : 'तारा से बात करें ("हे तारा")'}
-          className={`relative group flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 cursor-pointer ${
+          className={`relative group flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 cursor-pointer overflow-hidden ${
             isListening
               ? 'bg-cyan-500/30 border-2 border-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.8)] scale-105'
               : isSpeaking
               ? 'bg-teal-500/30 border-2 border-teal-300 shadow-[0_0_20px_rgba(20,184,166,0.8)] animate-pulse'
               : isThinking
-              ? 'bg-amber-500/30 border-2 border-amber-300 animate-spin'
+              ? 'bg-purple-500/30 border-2 border-purple-300 animate-pulse'
               : 'bg-slate-900 border border-cyan-500/40 hover:border-cyan-300 hover:shadow-[0_0_15px_rgba(6,182,212,0.5)]'
           }`}
         >
-          {/* Inner pulsating core ring */}
-          <div
-            className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-              isListening
-                ? 'bg-cyan-400/40'
-                : isSpeaking
-                ? 'bg-teal-400/40'
-                : 'bg-cyan-950/80'
-            }`}
-          >
-            {isListening ? (
-              <Mic className="w-4 h-4 text-cyan-200 animate-pulse" />
-            ) : isSpeaking ? (
-              <Volume2 className="w-4 h-4 text-teal-200 animate-bounce" />
-            ) : isThinking ? (
-              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+          {/* Mini Vector Face of Tara */}
+          <svg viewBox="0 0 100 100" className="w-9 h-9 drop-shadow">
+            {/* Hair Back */}
+            <circle cx="50" cy="46" r="32" fill="#141018" />
+            {/* Face */}
+            <circle cx="50" cy="50" r="23" fill="#ebb796" />
+            {/* Hair Front */}
+            <path d="M 27 46 C 35 30 65 30 73 46 C 65 38 35 38 27 46 Z" fill="#1e1822" />
+            {/* Bindi */}
+            <circle cx="50" cy="43" r="1.8" fill="#e11d48" />
+            {/* Eyes */}
+            {isSpeaking ? (
+              // Joyful animated eyes
+              <>
+                <path d="M 40 49 Q 44 47 48 49" fill="none" stroke="#1c0e18" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M 52 49 Q 56 47 60 49" fill="none" stroke="#1c0e18" strokeWidth="1.8" strokeLinecap="round" />
+              </>
             ) : (
-              <Zap className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <>
+                <circle cx="43" cy="49" r="2.2" fill="#2d170b" />
+                <circle cx="44" cy="48" r="0.8" fill="#ffffff" />
+                <circle cx="57" cy="49" r="2.2" fill="#2d170b" />
+                <circle cx="58" cy="48" r="0.8" fill="#ffffff" />
+              </>
             )}
-          </div>
+            {/* Mouth */}
+            {isSpeaking ? (
+              <ellipse cx="50" cy="62" rx="4.5" ry="3.5" fill="#bb3e54" className="animate-pulse" />
+            ) : isListening ? (
+              <path d="M 44 60 Q 50 66 56 60" fill="none" stroke="#bb3e54" strokeWidth="2" strokeLinecap="round" />
+            ) : (
+              <path d="M 45 61 Q 50 64 55 61" fill="none" stroke="#bb3e54" strokeWidth="1.8" strokeLinecap="round" />
+            )}
+          </svg>
+
+          {/* Indicator dot */}
+          <span
+            className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-slate-950 ${
+              isListening ? 'bg-red-500 animate-ping' : isSpeaking ? 'bg-teal-400 animate-pulse' : 'bg-cyan-400'
+            }`}
+          />
         </button>
 
         {/* Look at Screen Button ("हे तारा, स्क्रीन देखो") */}

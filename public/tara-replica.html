@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>👑 TARA AI - JARVIS Voice Assistant</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: #040611;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      padding: 0;
+    }
+
+    /* Main Container matching exact 1024x1536 resolution of the screenshot */
+    .phone-replica-frame {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      aspect-ratio: 1024 / 1536;
+      max-height: 98vh;
+      overflow: hidden;
+      background-image: url('/assets/aistudio/file_00000000360882079cd43dcbc877f3c6_1f3fcb0c.png');
+      background-size: 100% 100%;
+      background-position: center;
+      background-repeat: no-repeat;
+      box-shadow: 0 0 60px rgba(0, 240, 255, 0.35), 0 0 90px rgba(168, 85, 247, 0.3);
+    }
+
+    @media (min-width: 480px) {
+      .phone-replica-frame {
+        border-radius: 38px;
+        border: 2px solid #2e1d5e;
+      }
+    }
+
+    /* 1. CLOCK OVERLAY */
+    .clock-overlay {
+      position: absolute;
+      top: 1.2%;
+      left: 3.2%;
+      z-index: 20;
+      font-size: 13px;
+      font-weight: bold;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+    }
+
+    /* 2. HEADER BUTTONS */
+    .hotspot-settings {
+      position: absolute;
+      top: 4.6%;
+      right: 13.8%;
+      width: 8.8%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      z-index: 30;
+      cursor: pointer;
+      opacity: 0;
+      background: cyan;
+      border: none;
+    }
+    .hotspot-settings:hover {
+      opacity: 0.25;
+    }
+
+    .hotspot-notifications {
+      position: absolute;
+      top: 4.6%;
+      right: 3.2%;
+      width: 8.8%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      z-index: 30;
+      cursor: pointer;
+      opacity: 0;
+      background: magenta;
+      border: none;
+    }
+    .hotspot-notifications:hover {
+      opacity: 0.25;
+    }
+
+    /* 3. DYNAMIC SPEECH BUBBLE OVERLAY */
+    .speech-bubble-overlay {
+      position: absolute;
+      top: 14.8%;
+      right: 2.8%;
+      width: 33.5%;
+      height: 15.8%;
+      z-index: 30;
+      border-radius: 18px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.25;
+      color: #ffffff;
+    }
+    .speech-bubble-overlay.active {
+      background: rgba(12, 16, 46, 0.95);
+      border: 2px solid #00f0ff;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+      backdrop-filter: blur(10px);
+    }
+
+    /* 4. MIC BUTTON HOTSPOT */
+    .hotspot-mic {
+      position: absolute;
+      top: 43.5%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20.8%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      z-index: 40;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      outline: none;
+      transition: all 0.25s ease;
+    }
+    .hotspot-mic.listening {
+      box-shadow: 0 0 45px #00ffff, 0 0 65px #a855f7;
+      border: 3px solid #00ffff;
+    }
+    .hotspot-mic.speaking {
+      box-shadow: 0 0 40px #d946ef, 0 0 60px #00ffff;
+      border: 3px solid #d946ef;
+      animation: pulseGlow 1.4s infinite;
+    }
+
+    /* Sound waves overlay */
+    .live-wave-left, .live-wave-right {
+      position: absolute;
+      top: 48.2%;
+      width: 31%;
+      height: 4.5%;
+      z-index: 25;
+      display: none;
+      align-items: center;
+      gap: 3px;
+      pointer-events: none;
+    }
+    .live-wave-left {
+      left: 8%;
+      justify-content: flex-end;
+      padding-right: 8px;
+    }
+    .live-wave-right {
+      right: 8%;
+      justify-content: flex-start;
+      padding-left: 8px;
+    }
+    .live-wave-left.show, .live-wave-right.show {
+      display: flex;
+    }
+    .live-wave-bar {
+      width: 2.5px;
+      border-radius: 4px;
+      background: #00ffff;
+      box-shadow: 0 0 8px #00ffff;
+      transition: height 0.1s ease;
+    }
+    .live-wave-bar.purple {
+      background: #c084fc;
+      box-shadow: 0 0 8px #c084fc;
+    }
+
+    /* 5. STATUS PILL HOTSPOT */
+    .status-pill-overlay {
+      position: absolute;
+      top: 52.8%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40%;
+      height: 4.2%;
+      z-index: 35;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+    .status-pill-content {
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      background: rgba(7, 10, 36, 0.95);
+      border: 2px solid #00f0ff;
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #ffffff;
+      padding: 0 10px;
+    }
+
+    /* 6. GRID BUTTONS (3x2) */
+    .hotspot-card {
+      position: absolute;
+      width: 30.5%;
+      height: 9%;
+      border-radius: 18px;
+      z-index: 30;
+      cursor: pointer;
+      opacity: 0;
+      background: rgba(0, 240, 255, 0.25);
+      border: none;
+      transition: opacity 0.2s ease;
+    }
+    .hotspot-card:hover {
+      opacity: 0.35;
+    }
+    .card-chat { top: 58.3%; left: 2.4%; }
+    .card-music { top: 58.3%; left: 34.8%; }
+    .card-call { top: 58.3%; left: 67.1%; }
+    .card-flashlight { top: 68.3%; left: 2.4%; }
+    .card-weather { top: 68.3%; left: 34.8%; }
+    .card-more { top: 68.3%; left: 67.1%; }
+
+    /* 7. MOTIVATION CARD HOTSPOT */
+    .hotspot-motivation {
+      position: absolute;
+      top: 78.6%;
+      left: 2.4%;
+      width: 95.2%;
+      height: 9.6%;
+      border-radius: 20px;
+      z-index: 30;
+      cursor: pointer;
+      opacity: 0;
+      background: rgba(255, 230, 0, 0.25);
+      border: none;
+      transition: opacity 0.2s ease;
+    }
+    .hotspot-motivation:hover {
+      opacity: 0.3;
+    }
+
+    /* 8. BOTTOM NAVBAR HOTSPOTS */
+    .hotspot-nav {
+      position: absolute;
+      top: 90%;
+      height: 10%;
+      z-index: 30;
+      cursor: pointer;
+      opacity: 0;
+      background: rgba(168, 85, 247, 0.2);
+      border: none;
+    }
+    .hotspot-nav:hover {
+      opacity: 0.25;
+    }
+    .nav-home { left: 0; width: 25%; }
+    .nav-tools { left: 25%; width: 25%; }
+    .nav-favorites { left: 50%; width: 25%; }
+    .nav-profile { left: 75%; width: 25%; }
+
+    /* Modal dialogue */
+    .modal-chat {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      background: rgba(7, 9, 25, 0.96);
+      backdrop-filter: blur(14px);
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+    }
+    .modal-chat.open {
+      display: flex;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: translateX(-50%) scale(1.02); }
+      50% { transform: translateX(-50%) scale(1.08); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 100% Same-to-Same Pixel-Perfect Frame based on exact uploaded design -->
+  <div class="phone-replica-frame">
+    
+    <!-- Real-time clock overlay syncing with status bar -->
+    <div class="clock-overlay" id="clockText">6:30</div>
+
+    <!-- Header Settings & Bell Hotspots -->
+    <button class="hotspot-settings" id="btnSettings" title="Settings"></button>
+    <button class="hotspot-notifications" id="btnNotifications" title="Notifications"></button>
+
+    <!-- Dynamic Speech Bubble Overlay -->
+    <div class="speech-bubble-overlay" id="speechBubbleOverlay">
+      <div id="bubbleText"></div>
+    </div>
+
+    <!-- Sound waves live overlay -->
+    <div class="live-wave-left" id="liveWaveLeft">
+      <span class="live-wave-bar" style="height: 6px;"></span>
+      <span class="live-wave-bar purple" style="height: 12px;"></span>
+      <span class="live-wave-bar" style="height: 20px;"></span>
+      <span class="live-wave-bar purple" style="height: 28px;"></span>
+      <span class="live-wave-bar" style="height: 22px;"></span>
+      <span class="live-wave-bar purple" style="height: 14px;"></span>
+      <span class="live-wave-bar" style="height: 8px;"></span>
+    </div>
+
+    <div class="live-wave-right" id="liveWaveRight">
+      <span class="live-wave-bar" style="height: 8px;"></span>
+      <span class="live-wave-bar purple" style="height: 14px;"></span>
+      <span class="live-wave-bar" style="height: 22px;"></span>
+      <span class="live-wave-bar purple" style="height: 28px;"></span>
+      <span class="live-wave-bar" style="height: 20px;"></span>
+      <span class="live-wave-bar purple" style="height: 12px;"></span>
+      <span class="live-wave-bar" style="height: 6px;"></span>
+    </div>
+
+    <!-- Center Mic Button Hotspot -->
+    <button class="hotspot-mic" id="btnMic" title="Tap to talk to Tara AI"></button>
+
+    <!-- Status Pill Hotspot -->
+    <button class="status-pill-overlay" id="btnStatusPill">
+      <div class="status-pill-content" id="statusPillContent" style="display: none;">
+        <span id="statusIndicatorDot" style="width: 8px; height: 8px; border-radius: 50%; background: #00ff66;"></span>
+        <span id="statusPillText">Listening... Speak Now</span>
+      </div>
+    </button>
+
+    <!-- 6-Card Grid Hotspots (3x2) -->
+    <button class="hotspot-card card-chat" id="cardChat" title="AI Chat (चैट करें)"></button>
+    <button class="hotspot-card card-music" id="cardMusic" title="Play Music (संगीत चलाएं)"></button>
+    <button class="hotspot-card card-call" id="cardCall" title="Call (कॉल करें)"></button>
+    <button class="hotspot-card card-flashlight" id="cardFlashlight" title="Flashlight (टॉर्च जलाएं)"></button>
+    <button class="hotspot-card card-weather" id="cardWeather" title="Weather (मौसम देखें)"></button>
+    <button class="hotspot-card card-more" id="cardMore" title="More Apps (और भी...)"></button>
+
+    <!-- Motivation Card Hotspot -->
+    <button class="hotspot-motivation" id="cardMotivation" title="Motivation"></button>
+
+    <!-- Bottom Nav Hotspots -->
+    <button class="hotspot-nav nav-home" id="navHome" title="Home"></button>
+    <button class="hotspot-nav nav-tools" id="navTools" title="Tools"></button>
+    <button class="hotspot-nav nav-favorites" id="navFavorites" title="Favorites"></button>
+    <button class="hotspot-nav nav-profile" id="navProfile" title="Profile"></button>
+
+    <!-- Chat Modal Dialogue -->
+    <div class="modal-chat" id="chatModal">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid rgba(168,85,247,0.3);">
+        <div style="font-weight: bold; font-size: 14px;">🤖 TARA AI Live Chat</div>
+        <button id="btnCloseChat" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer;">✕</button>
+      </div>
+      <div style="flex: 1; overflow-y: auto; padding: 12px 0;" id="chatList">
+        <div style="padding: 10px; border-radius: 12px; background: rgba(59,7,100,0.5); font-size: 13px; margin-bottom: 8px;">
+          <strong style="color: #ffd700;">Tara:</strong> Hello Boss...! मैं हूँ TARA AI, आपकी पर्सनल असिस्टेंट!
+        </div>
+      </div>
+      <form id="chatForm" style="display: flex; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(168,85,247,0.3);">
+        <input type="text" id="chatInput" placeholder="यहाँ लिखें..." style="flex: 1; padding: 8px 12px; border-radius: 10px; background: rgba(0,0,0,0.6); border: 1px solid rgba(168,85,247,0.4); color: white; font-size: 13px; outline: none;" />
+        <button type="submit" style="padding: 8px 14px; border-radius: 10px; background: linear-gradient(90deg,#9333ea,#06b6d4); color: white; border: none; font-weight: bold; cursor: pointer;">Send</button>
+      </form>
+    </div>
+
+  </div>
+
+  <script>
+    (function() {
+      const clockText = document.getElementById('clockText');
+      const btnMic = document.getElementById('btnMic');
+      const statusPillContent = document.getElementById('statusPillContent');
+      const statusIndicatorDot = document.getElementById('statusIndicatorDot');
+      const statusPillText = document.getElementById('statusPillText');
+      const speechBubbleOverlay = document.getElementById('speechBubbleOverlay');
+      const bubbleText = document.getElementById('bubbleText');
+      const liveWaveLeft = document.getElementById('liveWaveLeft');
+      const liveWaveRight = document.getElementById('liveWaveRight');
+      const chatModal = document.getElementById('chatModal');
+      const btnCloseChat = document.getElementById('btnCloseChat');
+      const chatForm = document.getElementById('chatForm');
+      const chatInput = document.getElementById('chatInput');
+      const chatList = document.getElementById('chatList');
+
+      let currentStatus = 'idle'; // 'idle' | 'listening' | 'thinking' | 'speaking'
+      let typewriterTimer = null;
+      let waveTimer = null;
+      let silenceTimer = null;
+      let recognition = null;
+      let audioCtx = null;
+      let musicNodes = [];
+      let isMusicOn = false;
+
+      // Clock
+      function updateClock() {
+        const d = new Date();
+        const h = d.getHours() % 12 || 12;
+        const m = d.getMinutes();
+        clockText.textContent = `${h}:${m < 10 ? '0' : ''}${m}`;
+      }
+      updateClock();
+      setInterval(updateClock, 30000);
+
+      // Status updates
+      function setStatus(st) {
+        currentStatus = st;
+        btnMic.className = 'hotspot-mic';
+
+        if (st === 'listening') {
+          btnMic.classList.add('listening');
+          statusPillContent.style.display = 'flex';
+          statusIndicatorDot.style.background = '#00ff66';
+          statusPillText.textContent = 'Listening... Speak Now';
+          liveWaveLeft.classList.add('show');
+          liveWaveRight.classList.add('show');
+          startWavePulse();
+        } else if (st === 'thinking') {
+          btnMic.classList.add('speaking');
+          statusPillContent.style.display = 'flex';
+          statusIndicatorDot.style.background = '#c084fc';
+          statusPillText.textContent = 'Thinking...';
+          stopWavePulse();
+        } else if (st === 'speaking') {
+          btnMic.classList.add('speaking');
+          statusPillContent.style.display = 'flex';
+          statusIndicatorDot.style.background = '#00ffff';
+          statusPillText.textContent = 'Speaking Response...';
+          liveWaveLeft.classList.add('show');
+          liveWaveRight.classList.add('show');
+          startWavePulse();
+        } else {
+          statusPillContent.style.display = 'none';
+          liveWaveLeft.classList.remove('show');
+          liveWaveRight.classList.remove('show');
+          stopWavePulse();
+        }
+      }
+
+      function startWavePulse() {
+        if (waveTimer) clearInterval(waveTimer);
+        const bars = document.querySelectorAll('.live-wave-bar');
+        waveTimer = setInterval(() => {
+          bars.forEach(b => {
+            b.style.height = `${Math.max(4, Math.floor(Math.random() * 32))}px`;
+          });
+        }, 110);
+      }
+
+      function stopWavePulse() {
+        if (waveTimer) clearInterval(waveTimer);
+      }
+
+      // Voice Output
+      function speakText(txt) {
+        if (!('speechSynthesis' in window)) {
+          showSpeechInBubble(txt);
+          return;
+        }
+
+        window.speechSynthesis.cancel();
+        setStatus('speaking');
+        showSpeechInBubble(txt);
+
+        const clean = txt.replace(/[*#_`>]/g, ' ').trim();
+        const utter = new SpeechSynthesisUtterance(clean);
+        utter.rate = 1.02;
+        utter.pitch = 1.15;
+
+        const voices = window.speechSynthesis.getVoices();
+        const voice =
+          voices.find(v => v.lang.startsWith('hi') && (v.name.includes('Google') || v.name.includes('Female') || v.name.includes('Swara') || v.name.includes('Lekha') || v.name.includes('Natural'))) ||
+          voices.find(v => v.lang.includes('IN') && (v.name.toLowerCase().includes('female') || v.name.includes('Neerja') || v.name.includes('Priya'))) ||
+          voices.find(v => v.lang.startsWith('hi')) ||
+          voices.find(v => v.lang.includes('IN')) ||
+          voices.find(v => v.lang.startsWith('en'));
+
+        if (voice) utter.voice = voice;
+        else utter.lang = 'hi-IN';
+
+        utter.onend = () => setStatus('idle');
+        utter.onerror = () => setStatus('idle');
+        window.speechSynthesis.speak(utter);
+      }
+
+      function showSpeechInBubble(text) {
+        speechBubbleOverlay.classList.add('active');
+        if (typewriterTimer) clearInterval(typewriterTimer);
+        bubbleText.textContent = '';
+        let idx = 0;
+        typewriterTimer = setInterval(() => {
+          if (idx < text.length) {
+            bubbleText.textContent = text.slice(0, idx + 1);
+            idx++;
+          } else {
+            clearInterval(typewriterTimer);
+          }
+        }, 22);
+      }
+
+      // Gemini API
+      async function queryGemini(q) {
+        const trimmed = (q || '').trim();
+        if (!trimmed) {
+          setStatus('idle');
+          return;
+        }
+
+        setStatus('thinking');
+
+        try {
+          const res = await fetch('/api/tara/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: trimmed })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const reply = data.replyText || 'जी Boss, मैं सुन रही हूँ!';
+            speakText(reply);
+
+            const aiMsg = document.createElement('div');
+            aiMsg.style.cssText = 'padding: 8px 12px; border-radius: 10px; background: rgba(59,7,100,0.4); font-size: 13px; margin-bottom: 6px;';
+            aiMsg.innerHTML = `<strong style="color:#ffd700;">Tara:</strong> ${reply}`;
+            chatList.appendChild(aiMsg);
+            chatList.scrollTop = chatList.scrollHeight;
+          } else {
+            throw new Error('API failed');
+          }
+        } catch {
+          speakText('अरे Boss! मैं सुन रही हूँ। हुक्म कीजिए!');
+        }
+      }
+
+      // Mic Listening
+      function toggleMic() {
+        if (currentStatus === 'speaking') {
+          window.speechSynthesis.cancel();
+          setStatus('idle');
+          return;
+        }
+
+        if (currentStatus === 'listening') {
+          if (silenceTimer) clearTimeout(silenceTimer);
+          if (recognition) {
+            try { recognition.stop(); } catch(_) {}
+          }
+          return;
+        }
+
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRec) {
+          alert('SpeechRecognition उपलब्ध नहीं है। कृपया चैट से टाइप करें।');
+          return;
+        }
+
+        window.speechSynthesis.cancel();
+        if (silenceTimer) clearTimeout(silenceTimer);
+
+        recognition = new SpeechRec();
+        recognition.lang = 'hi-IN';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        setStatus('listening');
+        let latestSpoken = '';
+
+        recognition.onresult = (e) => {
+          let t = '';
+          let hasFinal = false;
+          for (let i = 0; i < e.results.length; i++) {
+            t += e.results[i][0].transcript + ' ';
+            if (e.results[i].isFinal) hasFinal = true;
+          }
+          const clean = t.trim();
+          latestSpoken = clean;
+
+          if (silenceTimer) clearTimeout(silenceTimer);
+          silenceTimer = setTimeout(() => {
+            if (latestSpoken && currentStatus === 'listening') {
+              try { recognition.stop(); } catch(_) {}
+              queryGemini(latestSpoken);
+            }
+          }, 1100);
+
+          if (hasFinal && clean.length > 2) {
+            if (silenceTimer) clearTimeout(silenceTimer);
+            try { recognition.stop(); } catch(_) {}
+            queryGemini(clean);
+          }
+        };
+
+        recognition.onerror = () => {
+          if (latestSpoken && currentStatus === 'listening') queryGemini(latestSpoken);
+          else setStatus('idle');
+        };
+
+        recognition.onend = () => {
+          if (currentStatus === 'listening') {
+            if (latestSpoken) queryGemini(latestSpoken);
+            else setStatus('idle');
+          }
+        };
+
+        try { recognition.start(); } catch(_) { setStatus('idle'); }
+      }
+
+      btnMic.addEventListener('click', toggleMic);
+      document.getElementById('btnStatusPill').addEventListener('click', toggleMic);
+
+      // Cards handlers
+      document.getElementById('cardChat').addEventListener('click', () => chatModal.classList.add('open'));
+      document.getElementById('cardMusic').addEventListener('click', toggleMusic);
+      document.getElementById('cardCall').addEventListener('click', () => speakText('नमस्ते Boss! मैं आपकी कॉल कनेक्ट कर रही हूँ... बताइए किससे बात करनी है?'));
+      document.getElementById('cardFlashlight').addEventListener('click', () => {
+        const torch = document.createElement('div');
+        torch.style.cssText = 'position:fixed;inset:0;background:white;z-index:100;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-direction:column;color:black;';
+        torch.innerHTML = '<div style="font-size:50px;">🔦</div><h3 style="font-weight:bold;margin-top:8px;">FLASHLIGHT ON</h3><p style="font-size:12px;color:#666;">Tap to turn off</p>';
+        document.body.appendChild(torch);
+        torch.onclick = () => torch.remove();
+        speakText('टॉर्च चालू कर दी गई है Boss!');
+      });
+      document.getElementById('cardWeather').addEventListener('click', () => queryGemini('आज का मौसम कैसा है?'));
+      document.getElementById('cardMore').addEventListener('click', () => speakText('Boss, आपके लिए सभी टूल्स और ऐप्स तैयार हैं!'));
+      document.getElementById('cardMotivation').addEventListener('click', () => speakText('मेहनत आज की, सफलता कल की... Keep Studying... You Can Do It! 💪'));
+
+      // Ambient synth music
+      function toggleMusic() {
+        if (isMusicOn) {
+          musicNodes.forEach(n => {
+            try { n.stop(); n.disconnect(); } catch(_) {}
+          });
+          musicNodes = [];
+          isMusicOn = false;
+          speakText('म्यूजिक रोक दिया गया है Boss!');
+        } else {
+          try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioCtx();
+            const freqs = [220, 277.18, 329.63, 440];
+            musicNodes = freqs.map((f, i) => {
+              const osc = audioCtx.createOscillator();
+              const gain = audioCtx.createGain();
+              osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+              osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+              gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+              osc.connect(gain);
+              gain.connect(audioCtx.destination);
+              osc.start();
+              return osc;
+            });
+            isMusicOn = true;
+            speakText('लीजिए Boss! आपका पसंदीदा म्यूजिक चालू हो गया है!');
+          } catch(_) {}
+        }
+      }
+
+      // Nav
+      document.getElementById('navTools').addEventListener('click', () => chatModal.classList.add('open'));
+      document.getElementById('navFavorites').addEventListener('click', toggleMusic);
+      document.getElementById('navProfile').addEventListener('click', () => speakText('Hello Boss! यह आपका पर्सनल TARA AI प्रोफाइल सेक्शन है।'));
+
+      // Chat modal
+      btnCloseChat.addEventListener('click', () => chatModal.classList.remove('open'));
+      chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const v = chatInput.value.trim();
+        if (v) {
+          queryGemini(v);
+          chatInput.value = '';
+          chatModal.classList.remove('open');
+        }
+      });
+
+      // Settings and Notifications
+      document.getElementById('btnSettings').addEventListener('click', () => {
+        alert('👑 TARA AI Settings\n• Engine: Gemini 3.8 Flash\n• Language: Hindi / Hinglish\n• Wake Word: "हे तारा" (Hey Tara)');
+      });
+      document.getElementById('btnNotifications').addEventListener('click', () => {
+        alert('🔔 Daily Study Reminder:\n“मेहनत आज की, सफलता कल की... Keep Studying... You Can Do It! 💪”');
+      });
+
+    })();
+  </script>
+</body>
+</html>
